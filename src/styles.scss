@@ -1,0 +1,12 @@
+.content {
+  text-align: center;
+}
+
+h1 {
+  color: teal;
+  font-size: 26px;
+
+  &:hover {
+    color: blue;
+  }
+}
