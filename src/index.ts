@@ -16,9 +16,8 @@ document.body.appendChild(renderer.domElement);
 
 function buildGeometry(): THREE.BufferGeometry {
     const geom = new THREE.BufferGeometry();
-    const verts: number[][] = [];
     const N = 500;
-    const indices: number[] = [];
+    const verts: number[][] = [];
     const vertUvs: number[][] = [];
     for (let i = 0; i < N; i++) {
         for (let j = 0; j < N; j++) {
@@ -26,6 +25,7 @@ function buildGeometry(): THREE.BufferGeometry {
             vertUvs.push([i / (N - 1), j / (N - 1)]);
         }
     }
+    const indices: number[] = [];
     for (let i = 0; i < N - 1; i++) {
         for (let j = 0; j < N - 1; j++) {
             /*
@@ -45,18 +45,14 @@ function buildGeometry(): THREE.BufferGeometry {
             indices.push(...triangleT);
         }
     }
-    const pos: number[] = [];
-    verts.forEach((x) => pos.push(...x));
-    const uvs: number[] = [];
-    vertUvs.forEach((x) => uvs.push(...x));
 
     geom.setAttribute(
         'position',
-        new THREE.BufferAttribute(new Float32Array(pos), 3)
+        new THREE.BufferAttribute(new Float32Array(verts.flat()), 3)
     );
     geom.setAttribute(
         'uv',
-        new THREE.BufferAttribute(new Float32Array(uvs), 2)
+        new THREE.BufferAttribute(new Float32Array(vertUvs.flat()), 2)
     );
     geom.setIndex(indices);
     return geom;
