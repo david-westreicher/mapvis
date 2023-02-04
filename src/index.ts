@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {HEIGHT_VERTEX_SHADER, HEIGHT_FRAGMENT_SHADER} from './shader';
 
 const scene = new THREE.Scene();
@@ -65,14 +66,12 @@ const material = new THREE.ShaderMaterial({
 const mesh = new THREE.Mesh(geometry, material);
 scene.add( mesh );
 
+const controls = new OrbitControls( camera, renderer.domElement );
+camera.position.set( 0, 0, 200 );
 
 function animate() {
-    requestAnimationFrame(animate);
-    camera.position.z = 400;
-	mesh.rotateZ(0.001);
-	mesh.rotateX(-0.001);
-
+	requestAnimationFrame( animate );
+	controls.update();
 	renderer.render( scene, camera );
 }
-
 animate();
