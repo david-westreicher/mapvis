@@ -95,18 +95,60 @@ function buildGridHelper(
                 Math.abs(x + start + 0.5),
                 Math.abs(y + start + 0.5)
             );
-            if (level > 0 && distanceToCenter < (width - 1) / 4) continue;
-            /*
-             A ----- B
-             | S   / |
-             |   /   |
-             | /  T  |
-             C ----- D
-            */
+            const recursiveSize = (width - 1) / 4;
+            if (level > 0 && distanceToCenter < recursiveSize) continue;
+
             const vertA = getVertexIndex(x, y);
             const vertB = getVertexIndex(x + 1, y);
             const vertC = getVertexIndex(x, y + 1);
             const vertD = getVertexIndex(x + 1, y + 1);
+
+            // Fix cracks between recursive grids
+            if (
+                level > 0 &&
+                recursiveSize < distanceToCenter &&
+                distanceToCenter <= recursiveSize + 1
+            ) {
+                /*
+                    A --E-- B
+                    |  /\   |
+                    G /  \  F
+                    |/    \ |
+                    C --H-- D
+                */
+                const vertE = getVertexIndex(x + 0.5, y);
+                const vertF = getVertexIndex(x + 1, y + 0.5);
+                const vertG = getVertexIndex(x, y + 0.5);
+                const vertH = getVertexIndex(x + 0.5, y + 1);
+                if (vertE) {
+                    triangles.push([vertA, vertE, vertC]);
+                    triangles.push([vertE, vertD, vertC]);
+                    triangles.push([vertE, vertB, vertD]);
+                    continue;
+                } else if (vertF) {
+                    triangles.push([vertA, vertB, vertF]);
+                    triangles.push([vertA, vertF, vertC]);
+                    triangles.push([vertC, vertF, vertD]);
+                    continue;
+                } else if (vertG) {
+                    triangles.push([vertA, vertB, vertG]);
+                    triangles.push([vertG, vertB, vertD]);
+                    triangles.push([vertG, vertD, vertC]);
+                    continue;
+                } else if (vertH) {
+                    triangles.push([vertA, vertH, vertC]);
+                    triangles.push([vertA, vertB, vertH]);
+                    triangles.push([vertB, vertD, vertH]);
+                    continue;
+                }
+            }
+            /*
+                A ----- B
+                | S   / |
+                |   /   |
+                | /  T  |
+                C ----- D
+            */
             if ((x % 2 == 0) === (y % 2 == 1)) {
                 triangles.push([vertA, vertB, vertC]);
                 triangles.push([vertB, vertD, vertC]);

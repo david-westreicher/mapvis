@@ -28,11 +28,14 @@ const material = new THREE.ShaderMaterial({
         camPos: {
             value: camPos,
         },
+        heightScale: {
+            value: 1000.0,
+        },
     },
     vertexShader: HEIGHT_VERTEX_SHADER,
     fragmentShader: HEIGHT_FRAGMENT_SHADER,
     side: THREE.FrontSide,
-    wireframe: true,
+    wireframe: false,
 });
 const mesh = new THREE.Mesh(geometry, material);
 scene.add(mesh);
