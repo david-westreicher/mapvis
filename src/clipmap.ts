@@ -2,15 +2,16 @@ import * as THREE from 'three';
 import * as Collections from 'typescript-collections';
 
 class Point {
-    constructor(public x: number, public y: number) {
+    constructor(public x: number, public y: number, public cellWidth: number) {
         this.x = Math.round(x);
         this.y = Math.round(y);
+        this.cellWidth = cellWidth;
     }
     toString(): string {
-        return Collections.util.makeString(this);
+        return this.x + '|' + this.y;
     }
     toArray(): number[] {
-        return [this.x, this.y, 0];
+        return [this.x, this.y, this.cellWidth];
     }
     normalize(normVal: number): number[] {
         return [this.x / normVal, this.y / normVal];
@@ -25,12 +26,12 @@ function buildGridHelper(
 ) {
     /*        
                Level: 3
-               Width: 9
+               Width: 8
 
-               1       2       3       4       5       6       7       8       9
+     vertices  0       1       2       3       4       5       6       7       8
                +-------+-------+-------+-------+-------+-------+-------+-------+
                |       |       |       |       |       |       |       |       |
-               |       |       |       |       |       |       |       |       |
+      cells-x  |   1   |   2   |   3   |   4   |   5   |   6   |   7   |   8   |
                |       |       |       |       |       |       |       |       |
                +-------+-------+-------+-------+-------+-------+-------+-------+
                |       |       |       |       |       |       |       |       |
@@ -64,38 +65,38 @@ function buildGridHelper(
 
      */
     if (level < 0) return;
-    const cellWidth = 2 ** level;
-    const start = -Math.floor(width / 2);
+    const cellWidth = 2 ** level * 10;
+    const midOffset = -width / 2;
+
+    // generate grid recursively
+    buildGridHelper(level - 1, width, verts, triangles);
 
     // generate vertices
-    for (let x = 0; x < width; x++) {
-        for (let y = 0; y < width; y++) {
-            const vertX = Math.round((x + start) * cellWidth);
-            const vertY = Math.round((y + start) * cellWidth);
-            const point = new Point(vertX, vertY);
+    for (let x = 0; x < width + 1; x++) {
+        for (let y = 0; y < width + 1; y++) {
+            const vertX = Math.round((x + midOffset) * cellWidth);
+            const vertY = Math.round((y + midOffset) * cellWidth);
+            const point = new Point(vertX, vertY, cellWidth);
             if (verts.containsKey(point)) continue;
             verts.setValue(point, verts.size());
         }
     }
 
-    // generate grid recursively
-    buildGridHelper(level - 1, width, verts, triangles);
-
     function getVertexIndex(x: number, y: number) {
-        const vertX = Math.round((x + start) * cellWidth);
-        const vertY = Math.round((y + start) * cellWidth);
-        const point = new Point(vertX, vertY);
+        const vertX = Math.round((x + midOffset) * cellWidth);
+        const vertY = Math.round((y + midOffset) * cellWidth);
+        const point = new Point(vertX, vertY, 0);
         return verts.getValue(point);
     }
 
     // generate triangles
-    for (let x = 0; x < width - 1; x++) {
-        for (let y = 0; y < width - 1; y++) {
+    for (let x = 0; x < width; x++) {
+        for (let y = 0; y < width; y++) {
             const distanceToCenter = Math.max(
-                Math.abs(x + start + 0.5),
-                Math.abs(y + start + 0.5)
+                Math.abs(x + midOffset + 0.5),
+                Math.abs(y + midOffset + 0.5)
             );
-            const recursiveSize = (width - 1) / 4;
+            const recursiveSize = width / 4;
             if (level > 0 && distanceToCenter < recursiveSize) continue;
 
             const vertA = getVertexIndex(x, y);
@@ -110,11 +111,11 @@ function buildGridHelper(
                 distanceToCenter <= recursiveSize + 1
             ) {
                 /*
-                    A --E-- B
+                    A---E---B
                     |  /\   |
                     G /  \  F
                     |/    \ |
-                    C --H-- D
+                    C---H---D
                 */
                 const vertE = getVertexIndex(x + 0.5, y);
                 const vertF = getVertexIndex(x + 1, y + 0.5);
@@ -143,11 +144,11 @@ function buildGridHelper(
                 }
             }
             /*
-                A ----- B
-                | S   / |
-                |   /   |
-                | /  T  |
-                C ----- D
+                A ----- B       A ----- B
+                | S   / |       | \  S  |
+                |   /   |  or   |   \   |
+                | /  T  |       | T   \ |
+                C ----- D       C ----- D
             */
             if ((x % 2 == 0) === (y % 2 == 1)) {
                 triangles.push([vertA, vertB, vertC]);
@@ -160,12 +161,16 @@ function buildGridHelper(
     }
 }
 
-export function buildGrid(level: number, width: number): THREE.BufferGeometry {
+export function buildGeometry(
+    level: number,
+    width: number
+): THREE.BufferGeometry {
+    if (width % 4 !== 0) throw new Error('Width has to be a multiple of 4');
     const points = new Collections.Dictionary<Point, number>();
     const triangles: number[][] = [];
     buildGridHelper(level, width, points, triangles);
 
-    const totalWidth = Math.floor(width / 2) * 2 ** level * 2;
+    const totalWidth = width * 2 ** level;
     const vertices = points.keys().map((point) => point.toArray());
     const vertUvs = points
         .keys()
