@@ -19,7 +19,9 @@ export const HEIGHT_VERTEX_SHADER = `
 export const HEIGHT_FRAGMENT_SHADER = `
     uniform sampler2D heightMap;
     uniform vec3 col;
+
     varying vec2 pos2D;
+
     void main() {
         gl_FragColor = vec4(texture2D(heightMap, pos2D).rgb * col, 1.0);
     }

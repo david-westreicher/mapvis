@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { HEIGHT_VERTEX_SHADER, HEIGHT_FRAGMENT_SHADER } from './shader';
 import { buildGeometry } from './clipmap';
+import * as QUADTREE from './quadtree';
 
 const ADD_WIREFRAME = false;
 const scene = new THREE.Scene();
@@ -14,6 +15,8 @@ const camera = new THREE.PerspectiveCamera(
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x00000000, 0);
+renderer.autoClear = false;
 document.body.appendChild(renderer.domElement);
 
 const heightMap = new THREE.TextureLoader().load('./assets/terrain2.png');
@@ -60,11 +63,32 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.screenSpacePanning = false;
 controls.target.set(0, 0, 100);
 
+const quadtree = new QUADTREE.Renderer();
+const guiScene = new THREE.Scene();
+const guiCamera = new THREE.OrthographicCamera(
+    0,
+    window.innerWidth,
+    window.innerHeight,
+    0
+);
+const planeSize = 200;
+const planeMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(planeSize, planeSize),
+    new THREE.MeshBasicMaterial({ map: quadtree.texture })
+);
+guiScene.add(planeMesh);
+planeMesh.position.set(planeSize / 2, planeSize / 2, -1);
+
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
     camPos[0] = controls.target.x;
     camPos[1] = controls.target.y;
+    const tmpCamera = new THREE.Vector3()
+        .copy(camera.position)
+        .multiplyScalar(1 / 10);
+    quadtree.render(renderer, tmpCamera);
     renderer.render(scene, camera);
+    renderer.render(guiScene, guiCamera);
 }
 animate();
