@@ -6,9 +6,8 @@ export const HEIGHT_VERTEX_SHADER = `
     varying vec2 pos2D;
 
     void main() {
-        float xOffset = ceil(camPos.x / (position.z));
-        float yOffset = ceil(camPos.y / (position.z));
-        pos2D = (position.xy + vec2(xOffset, yOffset) * position.z) / 5000.0;
+        vec2 offset = floor(camPos.xy / position.z + 0.5) * position.z;
+        pos2D = (position.xy + offset) / 5000.0;
 
         vec4 texFetch = textureLod(heightMap, pos2D, log(position.z)/log(2.0)-1.0);
         float zPos = texFetch.a * heightScale;
