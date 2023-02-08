@@ -13,9 +13,6 @@ class Point {
     toArray(): number[] {
         return [this.x, this.y, this.cellWidth];
     }
-    normalize(normVal: number): number[] {
-        return [this.x / normVal, this.y / normVal];
-    }
 }
 
 function buildGridHelper(
@@ -65,7 +62,7 @@ function buildGridHelper(
 
      */
     if (level < 0) return;
-    const cellWidth = 2 ** level * 10;
+    const cellWidth = 2 ** level * 20;
     const midOffset = -width / 2;
 
     // generate grid recursively
@@ -172,9 +169,6 @@ export function buildGeometry(
 
     const totalWidth = width * 2 ** level;
     const vertices = points.keys().map((point) => point.toArray());
-    const vertUvs = points
-        .keys()
-        .map((point) => point.normalize(totalWidth).map((x) => x + 0.5));
     console.log(
         `Created clipmap with ${vertices.length} vertices and ${triangles.length} triangles, width ${totalWidth}m`
     );
@@ -183,10 +177,6 @@ export function buildGeometry(
     geom.setAttribute(
         'position',
         new THREE.BufferAttribute(new Float32Array(vertices.flat()), 3)
-    );
-    geom.setAttribute(
-        'uv',
-        new THREE.BufferAttribute(new Float32Array(vertUvs.flat()), 2)
     );
     geom.setIndex(triangles.flat());
     return geom;
