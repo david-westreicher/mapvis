@@ -58,10 +58,11 @@ if (ADD_WIREFRAME)
     scene.add(new THREE.Mesh(geometry, generateWireFrameMaterial()));
 
 camera.up.set(0, 0, 1);
-camera.position.set(1000, 1000, 2000);
+camera.position.set(0, 0, 2000);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.screenSpacePanning = false;
 controls.target.set(0, 0, 100);
+controls.maxPolarAngle = Math.PI * 0.5;
 
 const quadtree = new QUADTREE.Renderer();
 const guiScene = new THREE.Scene();
@@ -86,7 +87,7 @@ function animate() {
     camPos[1] = controls.target.y;
     const tmpCamera = new THREE.Vector3()
         .copy(camera.position)
-        .multiplyScalar(1 / 10);
+        .multiplyScalar(1 / 100);
     quadtree.render(renderer, tmpCamera);
     renderer.render(scene, camera);
     renderer.render(guiScene, guiCamera);
