@@ -10,28 +10,6 @@ class VectorCache {
     );
     private i = 0;
 
-    public minDistance(
-        pos: THREE.Vector3,
-        x: number,
-        y: number,
-        size: number
-    ): number {
-        const startIndex = this.i;
-        this.get(x, y, 0);
-        this.get(x + size, y, 0);
-        this.get(x, y + size, 0);
-        this.get(x + size, y + size, 0);
-        this.get(x + size / 2, y + size / 2, 0);
-        let minDistance = Number.MAX_VALUE;
-        for (let i = 0; i < 5; i++) {
-            minDistance = Math.min(
-                minDistance,
-                this.tmpVectors[i + startIndex].distanceTo(pos)
-            );
-        }
-        return minDistance;
-    }
-
     public get(x: number, y: number, z: number): THREE.Vector3 {
         return this.tmpVectors[this.i++].set(x, y, z);
     }
@@ -74,6 +52,8 @@ export class Renderer {
             QUADTREE_SIZE
         );
         this.texture = renderTarget.texture;
+        this.texture.minFilter = THREE.NearestFilter;
+        this.texture.magFilter = THREE.NearestFilter;
         this._render = (renderer) => {
             renderer.setRenderTarget(renderTarget);
             renderer.clearColor();
@@ -105,7 +85,7 @@ export class Renderer {
         const lastmesh = this.meshes.at(-1);
         lastmesh.visible = true;
         lastmesh.position.set(camPos.x, camPos.y, -1);
-        lastmesh.scale.set(3, 3, 1);
+        lastmesh.scale.set(1, 1, 1);
         this._render(renderer);
     }
 }
@@ -121,7 +101,8 @@ export function getTiles(camPos: THREE.Vector3): THREE.Vector3[] {
             res.push(new THREE.Vector3(x, y, size));
             continue;
         }
-        const distance = vectorCache.minDistance(camPos, x, y, size);
+        const mid = vectorCache.get(x + size / 2, y + size / 2, 0);
+        const distance = mid.distanceTo(camPos);
         if (distance > size) {
             res.push(new THREE.Vector3(x, y, size));
             continue;
