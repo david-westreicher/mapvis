@@ -19,7 +19,10 @@ renderer.setClearColor(0x00000000, 0);
 renderer.autoClear = false;
 document.body.appendChild(renderer.domElement);
 
-const heightMap = new THREE.TextureLoader().load('./assets/terrain2.png');
+const heightMap = new THREE.TextureLoader().load(
+    'assets/terrain2.png'
+    //'https://ecn.t1.tiles.virtualearth.net/tiles/a12022131232333223.jpeg?g=13352'
+);
 heightMap.wrapS = THREE.MirroredRepeatWrapping;
 heightMap.wrapT = THREE.MirroredRepeatWrapping;
 heightMap.minFilter = THREE.LinearMipMapLinearFilter;
