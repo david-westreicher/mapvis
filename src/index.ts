@@ -19,10 +19,9 @@ function animate() {
     //clipMapScene.render();
 
     quadtreeScene.update();
-    const scaledCameraPos = new THREE.Vector3()
-        .copy(quadtreeScene.camera.position)
-        .multiplyScalar(1 / 1024)
-        .add(new THREE.Vector3(512, 512, 0));
+    const scaledCameraPos = quadtree.globalToLocal(
+        quadtreeScene.camera.position
+    );
     quadtree.update(scaledCameraPos);
     quadtreeScene.render();
     guiScene.render();

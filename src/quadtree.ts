@@ -83,6 +83,15 @@ export class Renderer {
         }
         this._render();
     }
+
+    public globalToLocal(pos: THREE.Vector3): THREE.Vector3 {
+        return pos
+            .clone()
+            .multiplyScalar(1 / QUADTREE_SIZE)
+            .add(
+                new THREE.Vector3(QUADTREE_SIZE * 0.5, QUADTREE_SIZE * 0.5, 0)
+            );
+    }
 }
 
 export function getTiles(camPos: THREE.Vector3): THREE.Vector3[] {
