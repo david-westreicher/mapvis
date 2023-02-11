@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { Mesh, MeshBasicMaterial, WebGLRenderer } from 'three';
 
 const QUADTREE_SIZE = 1024;
 
@@ -26,7 +25,7 @@ class VectorCache {
 const vectorCache = new VectorCache();
 
 export class Renderer {
-    private _render: (renderer: WebGLRenderer) => void;
+    private _render: (renderer: THREE.WebGLRenderer) => void;
     private meshes: THREE.Mesh<
         THREE.BufferGeometry,
         THREE.MeshBasicMaterial
@@ -43,9 +42,9 @@ export class Renderer {
         const bufferScene = new THREE.Scene();
         for (let i = 0; i < 300; i++) {
             const color = new THREE.Color();
-            const mesh = new Mesh(
+            const mesh = new THREE.Mesh(
                 new THREE.PlaneGeometry(1.0, 1.0),
-                new MeshBasicMaterial({ color })
+                new THREE.MeshBasicMaterial({ color })
             );
             mesh.position.z = -1;
             this.meshes.push(mesh);
@@ -66,7 +65,7 @@ export class Renderer {
         };
     }
 
-    public render(renderer: WebGLRenderer, camPos: THREE.Vector3) {
+    public render(renderer: THREE.WebGLRenderer, camPos: THREE.Vector3) {
         let i = 0;
         for (const tile of getTiles(camPos)) {
             if (i >= this.meshes.length) break;
