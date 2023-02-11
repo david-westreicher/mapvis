@@ -47,3 +47,15 @@ export const QUADTREE_FRAGMENT_SHADER = `
         gl_FragColor = texture2D(tile, inTileCoord / tileSize / 2.0 + tileCoord);
     }
 `;
+export const QUADTREE_DEBUG_FRAGMENT_SHADER = `
+    uniform sampler2D map;
+    varying vec2 uvVar;
+
+    void main() {
+        vec4 indirectionMap = texture2D(map, uvVar);
+        float tileSize = exp2(indirectionMap.b * 255.0);
+        vec2 inTileCoord = mod(uvVar * 1024.0, tileSize) / tileSize;
+        float tileSizeColor = indirectionMap.b * 256.0 / 10.0;
+        gl_FragColor = vec4(vec2(inTileCoord), tileSizeColor, 1.0);
+    }
+`;

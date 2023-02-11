@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {
+    QUADTREE_DEBUG_FRAGMENT_SHADER,
     HEIGHT_VERTEX_SHADER,
     HEIGHT_FRAGMENT_SHADER,
     QUADTREE_FRAGMENT_SHADER,
@@ -127,10 +128,18 @@ export class GuiScene {
     }
 
     public constructFullScreenMesh(quadTreeTexture: THREE.Texture): THREE.Mesh {
-        const planeSize = 200;
+        const planeSize = 400;
         const planeMesh = new THREE.Mesh(
             new THREE.PlaneGeometry(planeSize, planeSize),
-            new THREE.MeshBasicMaterial({ map: quadTreeTexture })
+            new THREE.ShaderMaterial({
+                uniforms: {
+                    map: {
+                        value: quadTreeTexture,
+                    },
+                },
+                fragmentShader: QUADTREE_DEBUG_FRAGMENT_SHADER,
+                vertexShader: QUADTREE_VERTEX_SHADER,
+            })
         );
         planeMesh.position.set(planeSize / 2, planeSize / 2, -1);
         return planeMesh;
@@ -184,8 +193,6 @@ export class QuadTreeScene extends ThreeDScene {
                 },
                 vertexShader: QUADTREE_VERTEX_SHADER,
                 fragmentShader: QUADTREE_FRAGMENT_SHADER,
-                side: THREE.FrontSide,
-                wireframe: false,
             })
         );
         return planeMesh;

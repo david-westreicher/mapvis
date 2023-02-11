@@ -46,7 +46,6 @@ export class Renderer {
         THREE.BufferGeometry,
         THREE.MeshBasicMaterial
     >[] = [];
-    private colorCache: { [key: string]: number } = {};
     public texture: THREE.Texture;
     constructor(private renderer: THREE.WebGLRenderer) {
         const camera = new THREE.OrthographicCamera(
@@ -90,13 +89,10 @@ export class Renderer {
             const mesh = this.meshes[i++];
             mesh.position.set(tile.x + tile.z / 2, tile.y + tile.z / 2, -1);
             mesh.scale.set(tile.z, tile.z, 1);
-            const key = `${tile.x}|${tile.y}|${tile.z}`;
-            let color = this.colorCache[key] || 0xffffff * Math.random();
-            color &= 0x000000;
+            let color = 0;
             color |= Math.round(tile.x / tile.z) % 2 << 16;
             color |= Math.round(tile.y / tile.z) % 2 << 8;
             color |= Math.log2(tile.z);
-            this.colorCache[key] = color;
             mesh.material.color.setHex(color);
             mesh.visible = true;
         }
