@@ -3,26 +3,57 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { HEIGHT_VERTEX_SHADER, HEIGHT_FRAGMENT_SHADER } from './shader';
 import * as CLIPMAP from './clipmap';
 
-export class ClipMapScene {
+export class ThreeDScene {
+    protected scene: THREE.Scene = new THREE.Scene();
     public camera: THREE.Camera = this.constructCamera();
+    protected controls: OrbitControls = this.constructControls();
+    constructor(protected renderer: THREE.Renderer) {}
 
-    private scene: THREE.Scene = new THREE.Scene();
-    private controls: OrbitControls = this.constructControls();
-    private clipMapMesh: THREE.Mesh<
-        THREE.BufferGeometry,
-        THREE.ShaderMaterial
-    > = this.constructMesh();
+    private constructControls(): OrbitControls {
+        const controls = new OrbitControls(
+            this.camera,
+            this.renderer.domElement
+        );
+        controls.screenSpacePanning = false;
+        controls.target.set(0, 0, 100);
+        controls.maxPolarAngle = Math.PI * 0.5;
+        return controls;
+    }
 
+    private constructCamera(): THREE.Camera {
+        const camera = new THREE.PerspectiveCamera(
+            75,
+            window.innerWidth / window.innerHeight,
+            1,
+            100000000
+        );
+        camera.up.set(0, 0, 1);
+        camera.position.set(0, 0, 2000);
+        return camera;
+    }
+
+    public update() {
+        this.controls.update();
+    }
+
+    public render() {
+        this.renderer.render(this.scene, this.camera);
+    }
+}
+
+export class ClipMapScene extends ThreeDScene {
     constructor(
-        private renderer: THREE.Renderer,
+        protected renderer: THREE.Renderer,
         private addWireframe: boolean = false
     ) {
-        this.scene.add(this.clipMapMesh);
+        super(renderer);
+        const clipMapMesh = this.constructMesh();
+        this.scene.add(clipMapMesh);
         if (this.addWireframe)
             this.scene.add(
                 new THREE.Mesh(
-                    this.clipMapMesh.geometry,
-                    this.generateWireFrameMaterial(this.clipMapMesh.material)
+                    clipMapMesh.geometry,
+                    this.generateWireFrameMaterial(clipMapMesh.material)
                 )
             );
     }
@@ -63,29 +94,6 @@ export class ClipMapScene {
         return new THREE.Mesh(geometry, clipMapMaterial);
     }
 
-    private constructControls(): OrbitControls {
-        const controls = new OrbitControls(
-            this.camera,
-            this.renderer.domElement
-        );
-        controls.screenSpacePanning = false;
-        controls.target.set(0, 0, 100);
-        controls.maxPolarAngle = Math.PI * 0.5;
-        return controls;
-    }
-
-    private constructCamera(): THREE.Camera {
-        const camera = new THREE.PerspectiveCamera(
-            75,
-            window.innerWidth / window.innerHeight,
-            1,
-            1000000000
-        );
-        camera.up.set(0, 0, 1);
-        camera.position.set(0, 0, 2000);
-        return camera;
-    }
-
     private generateWireFrameMaterial(otherMaterial: THREE.ShaderMaterial) {
         const material = new THREE.ShaderMaterial();
         material.copy(otherMaterial);
@@ -93,11 +101,6 @@ export class ClipMapScene {
         material.uniforms.col = { value: [0.5, 1.0, 0.0] };
         material.wireframe = true;
         return material;
-    }
-
-    public render() {
-        this.controls.update();
-        this.renderer.render(this.scene, this.camera);
     }
 }
 
@@ -130,5 +133,37 @@ export class GuiScene {
 
     public render() {
         this.renderer.render(this.scene, this.camera);
+    }
+}
+
+export class QuadTreeScene extends ThreeDScene {
+    private cameraMesh: THREE.Mesh = new THREE.Mesh(
+        new THREE.BoxGeometry(1, 1, 1),
+        new THREE.MeshBasicMaterial({ color: 0x000000 })
+    );
+    constructor(
+        protected renderer: THREE.WebGLRenderer,
+        quadTreeTexture: THREE.Texture
+    ) {
+        super(renderer);
+        this.scene.add(this.constructFullScreenMesh(quadTreeTexture));
+        this.scene.add(this.cameraMesh);
+    }
+
+    public update(): void {
+        super.update();
+        this.cameraMesh.position.copy(this.camera.position);
+        const scale = this.camera.position.z / 100;
+        this.cameraMesh.position.z = scale;
+        this.cameraMesh.scale.setScalar(scale);
+    }
+
+    public constructFullScreenMesh(quadTreeTexture: THREE.Texture): THREE.Mesh {
+        const planeSize = 1024 * 1024;
+        const planeMesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(planeSize, planeSize),
+            new THREE.MeshBasicMaterial({ map: quadTreeTexture })
+        );
+        return planeMesh;
     }
 }

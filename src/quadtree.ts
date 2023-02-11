@@ -81,10 +81,6 @@ export class Renderer {
         while (i < this.meshes.length) {
             this.meshes[i++].visible = false;
         }
-        const lastmesh = this.meshes.at(-1);
-        lastmesh.visible = true;
-        lastmesh.position.set(camPos.x, camPos.y, -1);
-        lastmesh.scale.set(1, 1, 1);
         this._render();
     }
 }
@@ -92,9 +88,6 @@ export class Renderer {
 export function getTiles(camPos: THREE.Vector3): THREE.Vector3[] {
     const res = [];
     vectorCache.reset();
-    const camPosTranslated = vectorCache
-        .from(camPos)
-        .add(vectorCache.get(QUADTREE_SIZE * 0.5, QUADTREE_SIZE * 0.5, 0));
     const stack = [vectorCache.get(0, 0, QUADTREE_SIZE)];
     while (stack.length) {
         const { x, y, z } = stack.pop();
@@ -104,7 +97,7 @@ export function getTiles(camPos: THREE.Vector3): THREE.Vector3[] {
             continue;
         }
         const mid = vectorCache.get(x + size / 2, y + size / 2, 0);
-        const distance = mid.distanceTo(camPosTranslated);
+        const distance = mid.distanceTo(camPos);
         if (distance > size) {
             res.push(new THREE.Vector3(x, y, size));
             continue;
