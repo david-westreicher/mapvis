@@ -6,11 +6,11 @@ export const HEIGHT_VERTEX_SHADER = `
     varying vec2 pos2D;
 
     void main() {
-        vec2 offset = floor(camPos.xy / position.z + 0.5) * position.z;
+        float gridSnap = max(256.0, floor(camPos.z * 0.5) * 2.0);
+        vec2 offset = floor(camPos.xy / gridSnap + 0.5) * gridSnap;
         pos2D = (position.xy + offset) / 5000.0;
 
-        vec4 texFetch = textureLod(heightMap, pos2D, log(position.z)/log(2.0)-1.0);
-        float zPos = texFetch.a * heightScale;
+        float zPos = textureLod(heightMap, pos2D, 0.0).a * heightScale;
         vec4 newPosition = vec4(pos2D * 5000.0, zPos, 1.0);
         vec4 mvPosition = modelViewMatrix * newPosition;
         gl_Position = projectionMatrix * mvPosition;

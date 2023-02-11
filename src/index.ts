@@ -22,6 +22,7 @@ document.body.appendChild(renderer.domElement);
 const heightMap = new THREE.TextureLoader().load('./assets/terrain2.png');
 heightMap.wrapS = THREE.MirroredRepeatWrapping;
 heightMap.wrapT = THREE.MirroredRepeatWrapping;
+heightMap.minFilter = THREE.LinearMipMapLinearFilter;
 const geometry = buildGeometry(5, 200);
 const camPos = [0, 0, 0];
 const clipMapMaterial = new THREE.ShaderMaterial({
@@ -83,8 +84,9 @@ planeMesh.position.set(planeSize / 2, planeSize / 2, -1);
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
-    camPos[0] = controls.target.x;
-    camPos[1] = controls.target.y;
+    camPos[0] = camera.position.x;
+    camPos[1] = camera.position.y;
+    camPos[2] = camera.position.z;
     const tmpCamera = new THREE.Vector3()
         .copy(camera.position)
         .multiplyScalar(1 / 100);

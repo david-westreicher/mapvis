@@ -14,6 +14,10 @@ class VectorCache {
         return this.tmpVectors[this.i++].set(x, y, z);
     }
 
+    public from(vec: THREE.Vector3): THREE.Vector3 {
+        return this.tmpVectors[this.i++].copy(vec);
+    }
+
     public reset() {
         this.i = 0;
     }
@@ -75,10 +79,6 @@ export class Renderer {
             mesh.material.color.setHex(color);
             mesh.visible = true;
         }
-        console.log(
-            Math.min(...getTiles(camPos).map((tile) => tile.z)),
-            getTiles(camPos).length
-        );
         while (i < this.meshes.length) {
             this.meshes[i++].visible = false;
         }
@@ -93,6 +93,9 @@ export class Renderer {
 export function getTiles(camPos: THREE.Vector3): THREE.Vector3[] {
     const res = [];
     vectorCache.reset();
+    const camPosTranslated = vectorCache
+        .from(camPos)
+        .add(vectorCache.get(QUADTREE_SIZE * 0.5, QUADTREE_SIZE * 0.5, 0));
     const stack = [vectorCache.get(0, 0, QUADTREE_SIZE)];
     while (stack.length) {
         const { x, y, z } = stack.pop();
@@ -102,7 +105,7 @@ export function getTiles(camPos: THREE.Vector3): THREE.Vector3[] {
             continue;
         }
         const mid = vectorCache.get(x + size / 2, y + size / 2, 0);
-        const distance = mid.distanceTo(camPos);
+        const distance = mid.distanceTo(camPosTranslated);
         if (distance > size) {
             res.push(new THREE.Vector3(x, y, size));
             continue;

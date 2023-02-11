@@ -102,6 +102,7 @@ function buildGridHelper(
             const vertD = getVertexIndex(x + 1, y + 1);
 
             // Fix cracks between recursive grids
+            // TODO: is this really needed?
             if (
                 level > 0 &&
                 recursiveSize < distanceToCenter &&
