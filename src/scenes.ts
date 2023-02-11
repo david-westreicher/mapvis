@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { HEIGHT_VERTEX_SHADER, HEIGHT_FRAGMENT_SHADER } from './shader';
+import {
+    HEIGHT_VERTEX_SHADER,
+    HEIGHT_FRAGMENT_SHADER,
+    QUADTREE_FRAGMENT_SHADER,
+    QUADTREE_VERTEX_SHADER,
+} from './shader';
 import * as CLIPMAP from './clipmap';
 
 export class ThreeDScene {
@@ -162,7 +167,25 @@ export class QuadTreeScene extends ThreeDScene {
         const planeSize = 1024 * 1024;
         const planeMesh = new THREE.Mesh(
             new THREE.PlaneGeometry(planeSize, planeSize),
-            new THREE.MeshBasicMaterial({ map: quadTreeTexture })
+            new THREE.ShaderMaterial({
+                uniforms: {
+                    quadMap: {
+                        value: quadTreeTexture,
+                    },
+                    tile: {
+                        value: new THREE.TextureLoader().load(
+                            'assets/test.png',
+                            (texture) => {
+                                texture.minFilter = THREE.NearestFilter;
+                            }
+                        ),
+                    },
+                },
+                vertexShader: QUADTREE_VERTEX_SHADER,
+                fragmentShader: QUADTREE_FRAGMENT_SHADER,
+                side: THREE.FrontSide,
+                wireframe: false,
+            })
         );
         return planeMesh;
     }

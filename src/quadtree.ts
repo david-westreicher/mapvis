@@ -68,11 +68,13 @@ export class Renderer {
         }
         const renderTarget = new THREE.WebGLRenderTarget(
             QUADTREE_SIZE,
-            QUADTREE_SIZE
+            QUADTREE_SIZE,
+            {
+                minFilter: THREE.NearestFilter,
+                magFilter: THREE.NearestFilter,
+            }
         );
         this.texture = renderTarget.texture;
-        this.texture.minFilter = THREE.NearestFilter;
-        this.texture.magFilter = THREE.NearestFilter;
         this._render = () => {
             this.renderer.setRenderTarget(renderTarget);
             this.renderer.clearColor();
@@ -89,7 +91,9 @@ export class Renderer {
             mesh.position.set(tile.x + tile.z / 2, tile.y + tile.z / 2, -1);
             mesh.scale.set(tile.z, tile.z, 1);
             const key = `${tile.x}|${tile.y}|${tile.z}`;
-            const color = this.colorCache[key] || 0xffffff * Math.random();
+            let color = this.colorCache[key] || 0xffffff * Math.random();
+            color &= 0xffff00;
+            color |= Math.log2(tile.z);
             this.colorCache[key] = color;
             mesh.material.color.setHex(color);
             mesh.visible = true;

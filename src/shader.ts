@@ -26,3 +26,23 @@ export const HEIGHT_FRAGMENT_SHADER = `
         gl_FragColor = vec4(texture2D(heightMap, pos2D).rgb * col, 1.0);
     }
 `;
+export const QUADTREE_VERTEX_SHADER = `
+    varying vec2 uvVar;
+    void main() {
+        uvVar = uv;
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_Position = projectionMatrix * mvPosition;
+    }
+`;
+export const QUADTREE_FRAGMENT_SHADER = `
+    uniform sampler2D quadMap;
+    uniform sampler2D tile;
+    varying vec2 uvVar;
+
+    void main() {
+        vec4 indirectionMap = texture2D(quadMap, uvVar);
+        float tileSize = exp2(indirectionMap.b * 255.0);
+        vec2 tileCoord = mod(uvVar * 1024.0, tileSize);
+        gl_FragColor = texture2D(tile, tileCoord / tileSize);
+    }
+`;
