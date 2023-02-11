@@ -10,9 +10,8 @@ jobs:
           node-version: '14'
       - run: npm install
       - run: npm run build
-      - run: npm run build
       - run: npm run test
       - name: Prettify code
         uses: creyD/prettier_action@v4.2
         with:
-          prettier_options: --write **/*.{ts}
+          prettier_options: --write **/*.{ts,html}
