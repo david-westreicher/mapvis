@@ -9,9 +9,20 @@ renderer.autoClear = false;
 document.body.appendChild(renderer.domElement);
 
 const quadtree = new QUADTREE.Renderer(renderer);
-const quadtreeScene = new QuadTreeScene(renderer, quadtree.texture);
+const physicalTexture = new THREE.TextureLoader().load(
+    'assets/physical_texture.png',
+    (texture) => {
+        texture.minFilter = THREE.NearestFilter;
+        texture.magFilter = THREE.NearestFilter;
+    }
+);
+const quadtreeScene = new QuadTreeScene(
+    renderer,
+    quadtree.texture,
+    physicalTexture
+);
 //const clipMapScene = new ClipMapScene(renderer);
-const guiScene = new GuiScene(renderer, quadtree.texture);
+const guiScene = new GuiScene(renderer, quadtree.texture, physicalTexture);
 
 function animate() {
     requestAnimationFrame(animate);

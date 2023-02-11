@@ -119,30 +119,49 @@ export class GuiScene {
     );
 
     private scene: THREE.Scene = new THREE.Scene();
+    private static readonly PLANE_SIZE = 200;
 
     constructor(
         private renderer: THREE.WebGLRenderer,
-        quadTreeTexture: THREE.Texture
+        quadTreeTexture: THREE.Texture,
+        physicalTexture: THREE.Texture
     ) {
-        this.scene.add(this.constructFullScreenMesh(quadTreeTexture));
+        this.scene.add(
+            this.constructFullScreenMesh(
+                this.constructQuadTreeDebugMaterial(quadTreeTexture)
+            )
+        );
+        this.scene.add(
+            this.constructFullScreenMesh(
+                new THREE.MeshBasicMaterial({ map: physicalTexture })
+            )
+        );
     }
 
-    public constructFullScreenMesh(quadTreeTexture: THREE.Texture): THREE.Mesh {
-        const planeSize = 400;
+    public constructFullScreenMesh(material: THREE.Material): THREE.Mesh {
         const planeMesh = new THREE.Mesh(
-            new THREE.PlaneGeometry(planeSize, planeSize),
-            new THREE.ShaderMaterial({
-                uniforms: {
-                    map: {
-                        value: quadTreeTexture,
-                    },
-                },
-                fragmentShader: QUADTREE_DEBUG_FRAGMENT_SHADER,
-                vertexShader: QUADTREE_VERTEX_SHADER,
-            })
+            new THREE.PlaneGeometry(GuiScene.PLANE_SIZE, GuiScene.PLANE_SIZE),
+            material
         );
-        planeMesh.position.set(planeSize / 2, planeSize / 2, -1);
+        planeMesh.position.set(
+            GuiScene.PLANE_SIZE / 2 +
+                GuiScene.PLANE_SIZE * this.scene.children.length,
+            GuiScene.PLANE_SIZE / 2,
+            -1
+        );
         return planeMesh;
+    }
+
+    public constructQuadTreeDebugMaterial(texture: THREE.Texture) {
+        return new THREE.ShaderMaterial({
+            uniforms: {
+                map: {
+                    value: texture,
+                },
+            },
+            fragmentShader: QUADTREE_DEBUG_FRAGMENT_SHADER,
+            vertexShader: QUADTREE_VERTEX_SHADER,
+        });
     }
 
     public render() {
@@ -157,10 +176,13 @@ export class QuadTreeScene extends ThreeDScene {
     );
     constructor(
         protected renderer: THREE.WebGLRenderer,
-        quadTreeTexture: THREE.Texture
+        quadTreeTexture: THREE.Texture,
+        physicalTexture: THREE.Texture
     ) {
         super(renderer);
-        this.scene.add(this.constructFullScreenMesh(quadTreeTexture));
+        this.scene.add(
+            this.constructFullScreenMesh(quadTreeTexture, physicalTexture)
+        );
         this.scene.add(this.cameraMesh);
     }
 
@@ -172,7 +194,10 @@ export class QuadTreeScene extends ThreeDScene {
         this.cameraMesh.scale.setScalar(scale);
     }
 
-    public constructFullScreenMesh(quadTreeTexture: THREE.Texture): THREE.Mesh {
+    public constructFullScreenMesh(
+        quadTreeTexture: THREE.Texture,
+        physicalTexture: THREE.Texture
+    ): THREE.Mesh {
         const planeSize = 1024 * 1024;
         const planeMesh = new THREE.Mesh(
             new THREE.PlaneGeometry(planeSize, planeSize),
@@ -182,13 +207,7 @@ export class QuadTreeScene extends ThreeDScene {
                         value: quadTreeTexture,
                     },
                     tile: {
-                        value: new THREE.TextureLoader().load(
-                            'assets/physical_texture.png',
-                            (texture) => {
-                                texture.minFilter = THREE.NearestFilter;
-                                texture.magFilter = THREE.NearestFilter;
-                            }
-                        ),
+                        value: physicalTexture,
                     },
                 },
                 vertexShader: QUADTREE_VERTEX_SHADER,

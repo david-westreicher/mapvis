@@ -37,14 +37,16 @@ export const QUADTREE_VERTEX_SHADER = `
 export const QUADTREE_FRAGMENT_SHADER = `
     uniform sampler2D quadMap;
     uniform sampler2D tile;
+    float PHYSICAL_TEXTURE_TILE_WIDTH = 4.0;
+    float QUADTREE_WIDTH = 1024.0;
     varying vec2 uvVar;
 
     void main() {
         vec4 indirectionMap = texture2D(quadMap, uvVar);
         float tileSize = exp2(indirectionMap.b * 255.0);
-        vec2 tileCoord = vec2(indirectionMap.r, indirectionMap.g) * 255.0 / 2.0;
-        vec2 inTileCoord = mod(uvVar * 1024.0, tileSize);
-        gl_FragColor = texture2D(tile, inTileCoord / tileSize / 2.0 + tileCoord);
+        vec2 tileCoord = vec2(indirectionMap.r, indirectionMap.g) * 255.0 / PHYSICAL_TEXTURE_TILE_WIDTH;
+        vec2 inTileCoord = mod(uvVar * QUADTREE_WIDTH, tileSize);
+        gl_FragColor = texture2D(tile, inTileCoord / tileSize / PHYSICAL_TEXTURE_TILE_WIDTH + tileCoord);
     }
 `;
 export const QUADTREE_DEBUG_FRAGMENT_SHADER = `
