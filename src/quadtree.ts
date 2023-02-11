@@ -17,6 +17,22 @@ class VectorCache {
         return this.tmpVectors[this.i++].copy(vec);
     }
 
+    public planeDistanceTo(
+        p: THREE.Vector3,
+        x: number,
+        y: number,
+        size: number
+    ) {
+        const vert = this.get.bind(this);
+        let d = Number.MAX_VALUE;
+        d = Math.min(d, p.distanceTo(vert(x, y, 0)));
+        d = Math.min(d, p.distanceTo(vert(x + size, y, 0)));
+        d = Math.min(d, p.distanceTo(vert(x, y + size, 0)));
+        d = Math.min(d, p.distanceTo(vert(x + size, y + size, 0)));
+        d = Math.min(d, p.distanceTo(vert(x + size * 0.5, y + size * 0.5, 0)));
+        return d;
+    }
+
     public reset() {
         this.i = 0;
     }
@@ -105,9 +121,7 @@ export function getTiles(camPos: THREE.Vector3): THREE.Vector3[] {
             res.push(new THREE.Vector3(x, y, size));
             continue;
         }
-        const mid = vectorCache.get(x + size / 2, y + size / 2, 0);
-        const distance = mid.distanceTo(camPos);
-        if (distance > size) {
+        if (vectorCache.planeDistanceTo(camPos, x, y, size) > size * 0.7) {
             res.push(new THREE.Vector3(x, y, size));
             continue;
         }
