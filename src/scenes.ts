@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import * as QUADTREE from './quadtree';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { HEIGHT_VERTEX_SHADER, HEIGHT_FRAGMENT_SHADER } from './shader';
 import * as CLIPMAP from './clipmap';
@@ -111,27 +110,25 @@ export class GuiScene {
     );
 
     private scene: THREE.Scene = new THREE.Scene();
-    private quadtree = new QUADTREE.Renderer();
 
-    constructor(private renderer: THREE.WebGLRenderer) {
-        this.scene.add(this.constructFullScreenMesh());
+    constructor(
+        private renderer: THREE.WebGLRenderer,
+        quadTreeTexture: THREE.Texture
+    ) {
+        this.scene.add(this.constructFullScreenMesh(quadTreeTexture));
     }
 
-    public constructFullScreenMesh(): THREE.Mesh {
+    public constructFullScreenMesh(quadTreeTexture: THREE.Texture): THREE.Mesh {
         const planeSize = 200;
         const planeMesh = new THREE.Mesh(
             new THREE.PlaneGeometry(planeSize, planeSize),
-            new THREE.MeshBasicMaterial({ map: this.quadtree.texture })
+            new THREE.MeshBasicMaterial({ map: quadTreeTexture })
         );
         planeMesh.position.set(planeSize / 2, planeSize / 2, -1);
         return planeMesh;
     }
 
-    public render(cameraPos: THREE.Vector3) {
-        const tmpCamera = new THREE.Vector3()
-            .copy(cameraPos)
-            .multiplyScalar(1 / 100);
-        this.quadtree.render(this.renderer, tmpCamera);
+    public render() {
         this.renderer.render(this.scene, this.camera);
     }
 }

@@ -25,14 +25,14 @@ class VectorCache {
 const vectorCache = new VectorCache();
 
 export class Renderer {
-    private _render: (renderer: THREE.WebGLRenderer) => void;
+    private _render: () => void;
     private meshes: THREE.Mesh<
         THREE.BufferGeometry,
         THREE.MeshBasicMaterial
     >[] = [];
     private colorCache: { [key: string]: number } = {};
     public texture: THREE.Texture;
-    constructor() {
+    constructor(private renderer: THREE.WebGLRenderer) {
         const camera = new THREE.OrthographicCamera(
             0,
             QUADTREE_SIZE,
@@ -57,15 +57,15 @@ export class Renderer {
         this.texture = renderTarget.texture;
         this.texture.minFilter = THREE.NearestFilter;
         this.texture.magFilter = THREE.NearestFilter;
-        this._render = (renderer) => {
-            renderer.setRenderTarget(renderTarget);
-            renderer.clearColor();
-            renderer.render(bufferScene, camera);
-            renderer.setRenderTarget(null);
+        this._render = () => {
+            this.renderer.setRenderTarget(renderTarget);
+            this.renderer.clearColor();
+            this.renderer.render(bufferScene, camera);
+            this.renderer.setRenderTarget(null);
         };
     }
 
-    public render(renderer: THREE.WebGLRenderer, camPos: THREE.Vector3) {
+    public update(camPos: THREE.Vector3) {
         let i = 0;
         for (const tile of getTiles(camPos)) {
             if (i >= this.meshes.length) break;
@@ -85,7 +85,7 @@ export class Renderer {
         lastmesh.visible = true;
         lastmesh.position.set(camPos.x, camPos.y, -1);
         lastmesh.scale.set(1, 1, 1);
-        this._render(renderer);
+        this._render();
     }
 }
 
