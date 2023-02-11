@@ -174,9 +174,10 @@ export class QuadTreeScene extends ThreeDScene {
                     },
                     tile: {
                         value: new THREE.TextureLoader().load(
-                            'assets/test.png',
+                            'assets/physical_texture.png',
                             (texture) => {
                                 texture.minFilter = THREE.NearestFilter;
+                                texture.magFilter = THREE.NearestFilter;
                             }
                         ),
                     },

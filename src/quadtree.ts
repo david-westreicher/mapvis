@@ -92,7 +92,9 @@ export class Renderer {
             mesh.scale.set(tile.z, tile.z, 1);
             const key = `${tile.x}|${tile.y}|${tile.z}`;
             let color = this.colorCache[key] || 0xffffff * Math.random();
-            color &= 0xffff00;
+            color &= 0x000000;
+            color |= Math.round(tile.x / tile.z) % 2 << 16;
+            color |= Math.round(tile.y / tile.z) % 2 << 8;
             color |= Math.log2(tile.z);
             this.colorCache[key] = color;
             mesh.material.color.setHex(color);
