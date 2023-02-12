@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { TileCache } from './tilecache';
 
 const QUADTREE_SIZE = 1024;
 
@@ -40,15 +41,17 @@ class VectorCache {
 
 const vectorCache = new VectorCache();
 
-export class Renderer {
+export class Quadtree {
     private _render: () => void;
     private meshes: THREE.Mesh<
         THREE.BufferGeometry,
         THREE.MeshBasicMaterial
     >[] = [];
-    private colorCache: { [key: string]: number } = {};
     public texture: THREE.Texture;
-    constructor(private renderer: THREE.WebGLRenderer) {
+    constructor(
+        private renderer: THREE.WebGLRenderer,
+        private tileCache: TileCache
+    ) {
         const camera = new THREE.OrthographicCamera(
             0,
             QUADTREE_SIZE,
@@ -85,21 +88,21 @@ export class Renderer {
 
     public update(camPos: THREE.Vector3) {
         let i = 0;
-        for (const tile of getTiles(camPos)) {
+        for (const quadTile of getTiles(camPos)) {
             if (i >= this.meshes.length) break;
             const mesh = this.meshes[i++];
-            mesh.position.set(tile.x + tile.z / 2, tile.y + tile.z / 2, -1);
-            mesh.scale.set(tile.z, tile.z, 1);
-            const key = `${tile.x}|${tile.y}|${tile.z}`;
-            if (!(key in this.colorCache)) {
-                const tileNumber = Math.floor(16 * Math.random());
-                let color = 0;
-                color |= tileNumber % 4 << 16;
-                color |= (tileNumber / 4) << 8;
-                color |= Math.log2(tile.z);
-                this.colorCache[key] = color;
-            }
-            mesh.material.color.setHex(this.colorCache[key]);
+            mesh.position.set(
+                quadTile.x + quadTile.z / 2,
+                quadTile.y + quadTile.z / 2,
+                -1
+            );
+            mesh.scale.set(quadTile.z, quadTile.z, 1);
+            const tileColor = this.tileCache.getEncodedTileColor(
+                quadTile.x,
+                quadTile.y,
+                quadTile.z
+            );
+            mesh.material.color.setHex(tileColor);
             mesh.visible = true;
         }
         while (i < this.meshes.length) {

@@ -128,7 +128,15 @@ export class GuiScene {
     ) {
         this.scene.add(
             this.constructFullScreenMesh(
-                this.constructQuadTreeDebugMaterial(quadTreeTexture)
+                new THREE.ShaderMaterial({
+                    uniforms: {
+                        map: {
+                            value: quadTreeTexture,
+                        },
+                    },
+                    fragmentShader: QUADTREE_DEBUG_FRAGMENT_SHADER,
+                    vertexShader: QUADTREE_VERTEX_SHADER,
+                })
             )
         );
         this.scene.add(
@@ -150,18 +158,6 @@ export class GuiScene {
             -1
         );
         return planeMesh;
-    }
-
-    public constructQuadTreeDebugMaterial(texture: THREE.Texture) {
-        return new THREE.ShaderMaterial({
-            uniforms: {
-                map: {
-                    value: texture,
-                },
-            },
-            fragmentShader: QUADTREE_DEBUG_FRAGMENT_SHADER,
-            vertexShader: QUADTREE_VERTEX_SHADER,
-        });
     }
 
     public render() {
@@ -206,7 +202,7 @@ export class QuadTreeScene extends ThreeDScene {
                     quadMap: {
                         value: quadTreeTexture,
                     },
-                    tile: {
+                    textureCache: {
                         value: physicalTexture,
                     },
                 },
