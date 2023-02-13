@@ -11,11 +11,7 @@ document.body.appendChild(renderer.domElement);
 
 const tileCache = new TileCache(renderer);
 const quadtree = new Quadtree(renderer, tileCache);
-const quadtreeScene = new QuadTreeScene(
-    renderer,
-    quadtree.texture,
-    tileCache.texture
-);
+const quadtreeScene = new QuadTreeScene(renderer, quadtree.texture, tileCache.texture);
 const clipMapScene = new ClipMapScene(renderer);
 const guiScene = new GuiScene(renderer, quadtree.texture, tileCache.texture);
 
@@ -26,9 +22,7 @@ function animate() {
 
     tileCache.update();
     quadtreeScene.update();
-    const scaledCameraPos = quadtree.globalToLocal(
-        quadtreeScene.camera.position
-    );
+    const scaledCameraPos = quadtree.globalToLocal(quadtreeScene.camera.position);
     quadtree.update(scaledCameraPos);
     quadtreeScene.render();
     guiScene.render();

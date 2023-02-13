@@ -4,10 +4,7 @@ import { TileCache } from './tilecache';
 const QUADTREE_SIZE = 1024;
 
 class VectorCache {
-    private tmpVectors = Array.from(
-        { length: 10000 },
-        () => new THREE.Vector3()
-    );
+    private tmpVectors = Array.from({ length: 10000 }, () => new THREE.Vector3());
     private i = 0;
 
     public get(x: number, y: number, z: number): THREE.Vector3 {
@@ -18,12 +15,7 @@ class VectorCache {
         return this.tmpVectors[this.i++].copy(vec);
     }
 
-    public planeDistanceTo(
-        p: THREE.Vector3,
-        x: number,
-        y: number,
-        size: number
-    ) {
+    public planeDistanceTo(p: THREE.Vector3, x: number, y: number, size: number) {
         const vert = this.get.bind(this);
         let d = Number.MAX_VALUE;
         d = Math.min(d, p.distanceTo(vert(x, y, 0)));
@@ -43,40 +35,22 @@ const vectorCache = new VectorCache();
 
 export class Quadtree {
     private _render: () => void;
-    private meshes: THREE.Mesh<
-        THREE.BufferGeometry,
-        THREE.MeshBasicMaterial
-    >[] = [];
+    private meshes: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>[] = [];
     public texture: THREE.Texture;
-    constructor(
-        private renderer: THREE.WebGLRenderer,
-        private tileCache: TileCache
-    ) {
-        const camera = new THREE.OrthographicCamera(
-            0,
-            QUADTREE_SIZE,
-            QUADTREE_SIZE,
-            0
-        );
+    constructor(private renderer: THREE.WebGLRenderer, private tileCache: TileCache) {
+        const camera = new THREE.OrthographicCamera(0, QUADTREE_SIZE, QUADTREE_SIZE, 0);
         const bufferScene = new THREE.Scene();
         for (let i = 0; i < 300; i++) {
             const color = new THREE.Color();
-            const mesh = new THREE.Mesh(
-                new THREE.PlaneGeometry(1.0, 1.0),
-                new THREE.MeshBasicMaterial({ color })
-            );
+            const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 1.0), new THREE.MeshBasicMaterial({ color }));
             mesh.position.z = -1;
             this.meshes.push(mesh);
             bufferScene.add(mesh);
         }
-        const renderTarget = new THREE.WebGLRenderTarget(
-            QUADTREE_SIZE,
-            QUADTREE_SIZE,
-            {
-                minFilter: THREE.NearestFilter,
-                magFilter: THREE.NearestFilter,
-            }
-        );
+        const renderTarget = new THREE.WebGLRenderTarget(QUADTREE_SIZE, QUADTREE_SIZE, {
+            minFilter: THREE.NearestFilter,
+            magFilter: THREE.NearestFilter,
+        });
         this.texture = renderTarget.texture;
         this._render = () => {
             this.renderer.setRenderTarget(renderTarget);
@@ -91,17 +65,9 @@ export class Quadtree {
         for (const quadTile of getTiles(camPos)) {
             if (i >= this.meshes.length) break;
             const mesh = this.meshes[i++];
-            mesh.position.set(
-                quadTile.x + quadTile.z / 2,
-                quadTile.y + quadTile.z / 2,
-                -1
-            );
+            mesh.position.set(quadTile.x + quadTile.z / 2, quadTile.y + quadTile.z / 2, -1);
             mesh.scale.set(quadTile.z, quadTile.z, 1);
-            const tileColor = this.tileCache.getEncodedTileColor(
-                quadTile.x,
-                quadTile.y,
-                quadTile.z
-            );
+            const tileColor = this.tileCache.getEncodedTileColor(quadTile.x, quadTile.y, quadTile.z);
             mesh.material.color.setHex(tileColor);
             mesh.visible = true;
         }
@@ -115,9 +81,7 @@ export class Quadtree {
         return pos
             .clone()
             .multiplyScalar(1 / QUADTREE_SIZE)
-            .add(
-                new THREE.Vector3(QUADTREE_SIZE * 0.5, QUADTREE_SIZE * 0.5, 0)
-            );
+            .add(new THREE.Vector3(QUADTREE_SIZE * 0.5, QUADTREE_SIZE * 0.5, 0));
     }
 }
 

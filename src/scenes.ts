@@ -16,10 +16,7 @@ export class ThreeDScene {
     constructor(protected renderer: THREE.Renderer) {}
 
     private constructControls(): OrbitControls {
-        const controls = new OrbitControls(
-            this.camera,
-            this.renderer.domElement
-        );
+        const controls = new OrbitControls(this.camera, this.renderer.domElement);
         controls.screenSpacePanning = false;
         controls.target.set(0, 0, 100);
         controls.maxPolarAngle = Math.PI * 0.5;
@@ -27,12 +24,7 @@ export class ThreeDScene {
     }
 
     private constructCamera(): THREE.Camera {
-        const camera = new THREE.PerspectiveCamera(
-            75,
-            window.innerWidth / window.innerHeight,
-            1,
-            100000000
-        );
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 100000000);
         camera.up.set(0, 0, 1);
         camera.position.set(0, 0, 2000);
         return camera;
@@ -48,26 +40,15 @@ export class ThreeDScene {
 }
 
 export class ClipMapScene extends ThreeDScene {
-    constructor(
-        protected renderer: THREE.Renderer,
-        private addWireframe: boolean = false
-    ) {
+    constructor(protected renderer: THREE.Renderer, private addWireframe: boolean = false) {
         super(renderer);
         const clipMapMesh = this.constructMesh();
         this.scene.add(clipMapMesh);
         if (this.addWireframe)
-            this.scene.add(
-                new THREE.Mesh(
-                    clipMapMesh.geometry,
-                    this.generateWireFrameMaterial(clipMapMesh.material)
-                )
-            );
+            this.scene.add(new THREE.Mesh(clipMapMesh.geometry, this.generateWireFrameMaterial(clipMapMesh.material)));
     }
 
-    private constructMesh(): THREE.Mesh<
-        THREE.BufferGeometry,
-        THREE.ShaderMaterial
-    > {
+    private constructMesh(): THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial> {
         const heightMap = new THREE.TextureLoader().load(
             'assets/terrain2.png'
             //'https://ecn.t1.tiles.virtualearth.net/tiles/a12022131232333223.jpeg?g=13352'
@@ -111,21 +92,12 @@ export class ClipMapScene extends ThreeDScene {
 }
 
 export class GuiScene {
-    public camera: THREE.Camera = new THREE.OrthographicCamera(
-        0,
-        window.innerWidth,
-        window.innerHeight,
-        0
-    );
+    public camera: THREE.Camera = new THREE.OrthographicCamera(0, window.innerWidth, window.innerHeight, 0);
 
     private scene: THREE.Scene = new THREE.Scene();
     private static readonly PLANE_SIZE = 200;
 
-    constructor(
-        private renderer: THREE.WebGLRenderer,
-        quadTreeTexture: THREE.Texture,
-        physicalTexture: THREE.Texture
-    ) {
+    constructor(private renderer: THREE.WebGLRenderer, quadTreeTexture: THREE.Texture, physicalTexture: THREE.Texture) {
         this.scene.add(
             this.constructFullScreenMesh(
                 new THREE.ShaderMaterial({
@@ -139,21 +111,13 @@ export class GuiScene {
                 })
             )
         );
-        this.scene.add(
-            this.constructFullScreenMesh(
-                new THREE.MeshBasicMaterial({ map: physicalTexture })
-            )
-        );
+        this.scene.add(this.constructFullScreenMesh(new THREE.MeshBasicMaterial({ map: physicalTexture })));
     }
 
     public constructFullScreenMesh(material: THREE.Material): THREE.Mesh {
-        const planeMesh = new THREE.Mesh(
-            new THREE.PlaneGeometry(GuiScene.PLANE_SIZE, GuiScene.PLANE_SIZE),
-            material
-        );
+        const planeMesh = new THREE.Mesh(new THREE.PlaneGeometry(GuiScene.PLANE_SIZE, GuiScene.PLANE_SIZE), material);
         planeMesh.position.set(
-            GuiScene.PLANE_SIZE / 2 +
-                GuiScene.PLANE_SIZE * this.scene.children.length,
+            GuiScene.PLANE_SIZE / 2 + GuiScene.PLANE_SIZE * this.scene.children.length,
             GuiScene.PLANE_SIZE / 2,
             -1
         );
@@ -176,9 +140,7 @@ export class QuadTreeScene extends ThreeDScene {
         physicalTexture: THREE.Texture
     ) {
         super(renderer);
-        this.scene.add(
-            this.constructFullScreenMesh(quadTreeTexture, physicalTexture)
-        );
+        this.scene.add(this.constructFullScreenMesh(quadTreeTexture, physicalTexture));
         this.scene.add(this.cameraMesh);
     }
 
@@ -190,10 +152,7 @@ export class QuadTreeScene extends ThreeDScene {
         this.cameraMesh.scale.setScalar(scale);
     }
 
-    public constructFullScreenMesh(
-        quadTreeTexture: THREE.Texture,
-        physicalTexture: THREE.Texture
-    ): THREE.Mesh {
+    public constructFullScreenMesh(quadTreeTexture: THREE.Texture, physicalTexture: THREE.Texture): THREE.Mesh {
         const planeSize = 1024 * 1024;
         const planeMesh = new THREE.Mesh(
             new THREE.PlaneGeometry(planeSize, planeSize),
