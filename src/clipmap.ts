@@ -89,10 +89,7 @@ function buildGridHelper(
     // generate triangles
     for (let x = 0; x < width; x++) {
         for (let y = 0; y < width; y++) {
-            const distanceToCenter = Math.max(
-                Math.abs(x + midOffset + 0.5),
-                Math.abs(y + midOffset + 0.5)
-            );
+            const distanceToCenter = Math.max(Math.abs(x + midOffset + 0.5), Math.abs(y + midOffset + 0.5));
             const recursiveSize = width / 4;
             if (level > 0 && distanceToCenter < recursiveSize) continue;
 
@@ -103,11 +100,7 @@ function buildGridHelper(
 
             // Fix cracks between recursive grids
             // TODO: is this really needed?
-            if (
-                level > 0 &&
-                recursiveSize < distanceToCenter &&
-                distanceToCenter <= recursiveSize + 1
-            ) {
+            if (level > 0 && recursiveSize < distanceToCenter && distanceToCenter <= recursiveSize + 1) {
                 /*
                     A---E---B
                     |  /\   |
@@ -159,10 +152,7 @@ function buildGridHelper(
     }
 }
 
-export function buildGeometry(
-    level: number,
-    width: number
-): THREE.BufferGeometry {
+export function buildGeometry(level: number, width: number): THREE.BufferGeometry {
     if (width % 4 !== 0) throw new Error('Width has to be a multiple of 4');
     const points = new Collections.Dictionary<Point, number>();
     const triangles: number[][] = [];
@@ -175,10 +165,7 @@ export function buildGeometry(
     );
 
     const geom = new THREE.BufferGeometry();
-    geom.setAttribute(
-        'position',
-        new THREE.BufferAttribute(new Float32Array(vertices.flat()), 3)
-    );
+    geom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(vertices.flat()), 3));
     geom.setIndex(triangles.flat());
     return geom;
 }

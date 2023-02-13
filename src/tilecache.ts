@@ -10,11 +10,7 @@ class Tile {
 
     constructor(public x: number, public y: number) {}
 
-    public download(
-        key: string,
-        onFinishedLoading: () => void,
-        onError: () => void
-    ) {
+    public download(key: string, onFinishedLoading: () => void, onError: () => void) {
         this.key = key;
         if (this.texture !== null) {
             throw new Error('Texture was not disposed correctly');
@@ -33,12 +29,7 @@ class Tile {
 }
 
 export class TileCache {
-    private camera = new THREE.OrthographicCamera(
-        0,
-        TILECACHE_PIXEL_WIDTH,
-        TILECACHE_PIXEL_WIDTH,
-        0
-    );
+    private camera = new THREE.OrthographicCamera(0, TILECACHE_PIXEL_WIDTH, TILECACHE_PIXEL_WIDTH, 0);
     private renderTarget = new THREE.WebGLRenderTarget(
         TILECACHE_PIXEL_WIDTH,
         TILECACHE_PIXEL_WIDTH
@@ -94,21 +85,10 @@ export class TileCache {
         this.mesh.material.map = tile.texture;
         const left = tile.x * TILE_WIDTH;
         const bottom = tile.y * TILE_WIDTH;
-        const oldViewport = this.renderer.getCurrentViewport(
-            new THREE.Vector4()
-        );
-        this.mesh.position.set(
-            left + TILE_WIDTH * 0.5,
-            bottom + TILE_WIDTH * 0.5,
-            -1
-        );
+        const oldViewport = this.renderer.getCurrentViewport(new THREE.Vector4());
+        this.mesh.position.set(left + TILE_WIDTH * 0.5, bottom + TILE_WIDTH * 0.5, -1);
         this.renderer.setViewport(left, bottom, TILE_WIDTH, TILE_WIDTH);
-        this.renderTarget.scissor = new THREE.Vector4(
-            left,
-            bottom,
-            TILE_WIDTH,
-            TILE_WIDTH
-        );
+        this.renderTarget.scissor = new THREE.Vector4(left, bottom, TILE_WIDTH, TILE_WIDTH);
 
         this.renderer.setRenderTarget(this.renderTarget);
         this.renderer.render(this.scene, this.camera);
