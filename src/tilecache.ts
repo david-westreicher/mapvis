@@ -15,7 +15,6 @@ class Tile {
         if (this.texture !== null) {
             throw new Error('Texture was not disposed correctly');
         }
-        this.texture = null;
         new THREE.TextureLoader().load(
             Math.random() < 0.5 ? 'assets/test.png' : 'assets/terrain.png',
             async (texture) => {
@@ -26,19 +25,17 @@ class Tile {
             onError
         );
     }
+
+    public clear() {
+        this.key = '';
+        this.texture.dispose();
+        this.texture = null;
+    }
 }
 
 export class TileCache {
     private camera = new THREE.OrthographicCamera(0, TILECACHE_PIXEL_WIDTH, TILECACHE_PIXEL_WIDTH, 0);
-    private renderTarget = new THREE.WebGLRenderTarget(
-        TILECACHE_PIXEL_WIDTH,
-        TILECACHE_PIXEL_WIDTH
-        // TODO: what about Filtering for texture atlas, should we use a texture array instead?
-        /*{
-            minFilter: THREE.NearestFilter,
-            magFilter: THREE.NearestFilter,
-        }*/
-    );
+    private renderTarget = new THREE.WebGLRenderTarget(TILECACHE_PIXEL_WIDTH, TILECACHE_PIXEL_WIDTH);
     private scene = new THREE.Scene();
     private mesh = new THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>(
         new THREE.PlaneGeometry(TILE_WIDTH, TILE_WIDTH),
@@ -95,7 +92,7 @@ export class TileCache {
 
         this.renderer.setRenderTarget(null);
         this.renderer.setViewport(oldViewport);
-        tile.texture.dispose();
+        tile.clear();
     }
 
     public getEncodedTileColor(x: number, y: number, size: number): number {
@@ -125,3 +122,16 @@ export class TileCache {
         );
     }
 }
+
+/* TODO: TilePriorityDownloader
+         use 2 LRU caches:
+              * lru_priority[tileKey]: should store how many frames the tile is already visible
+              * lru_lastframevis[tileKey]: stores on which frame the tile was last visible
+         every frame get a list of visible tiles:
+              * if tile is already in texture cache => skip
+              * if tile not in lru_priority or lru_lastframevis[tile] != curr_frame - 1 =>
+                      lru_priority[tile] = 1, lru_lastframevis[tile] = curr_frame
+              * if tile in lru_priority and lru_lastframevis[tile] == curr_frame - 1 =>
+                      lru_priority[tile] += 1, lru_lastframevis[tile] = curr_frame
+                      if lru_priority[tile] is now > 30 => download tile
+*/
