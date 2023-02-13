@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { Quadtree } from './quadtree';
 import { TileCache } from './tilecache';
-import { GuiScene, QuadTreeScene } from './scenes';
+import { ClipMapScene, GuiScene, QuadTreeScene } from './scenes';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -16,13 +16,13 @@ const quadtreeScene = new QuadTreeScene(
     quadtree.texture,
     tileCache.texture
 );
-//const clipMapScene = new ClipMapScene(renderer);
+const clipMapScene = new ClipMapScene(renderer);
 const guiScene = new GuiScene(renderer, quadtree.texture, tileCache.texture);
 
 function animate() {
     requestAnimationFrame(animate);
-    //clipMapScene.update();
-    //clipMapScene.render();
+    clipMapScene.update();
+    clipMapScene.render();
 
     tileCache.update();
     quadtreeScene.update();
