@@ -8,7 +8,7 @@ import {
     QUADTREE_VERTEX_SHADER,
 } from './shader';
 import * as CLIPMAP from './clipmap';
-import { QUADTREE_SIZE } from './constants';
+import { QUADTREE_SIZE, TILECACHE_WIDTH, TILECACHE_PIXEL_WIDTH } from './constants';
 
 export class ThreeDScene {
     protected scene: THREE.Scene = new THREE.Scene();
@@ -170,6 +170,12 @@ export class QuadTreeScene extends ThreeDScene {
                     },
                     QUADTREE_WIDTH: {
                         value: QUADTREE_SIZE,
+                    },
+                    TILECACHE_WIDTH: {
+                        value: TILECACHE_WIDTH,
+                    },
+                    TILECACHE_PIXEL_WIDTH: {
+                        value: TILECACHE_PIXEL_WIDTH,
                     },
                 },
                 vertexShader: QUADTREE_VERTEX_SHADER,

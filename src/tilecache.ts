@@ -1,10 +1,6 @@
 import * as THREE from 'three';
 import * as Collections from 'typescript-collections';
-import { QUADTREE_SIZE } from './constants';
-
-const TILECACHE_PIXEL_WIDTH = 4096;
-const TILE_WIDTH = 256;
-const TILECACHE_WIDTH = TILECACHE_PIXEL_WIDTH / TILE_WIDTH;
+import { QUADTREE_SIZE, TILE_WIDTH, TILECACHE_PIXEL_WIDTH, TILECACHE_WIDTH } from './constants';
 
 class Tile {
     public key = '';
@@ -37,7 +33,10 @@ class Tile {
 
 export class TileCache {
     private camera = new THREE.OrthographicCamera(0, TILECACHE_PIXEL_WIDTH, TILECACHE_PIXEL_WIDTH, 0);
-    private renderTarget = new THREE.WebGLRenderTarget(TILECACHE_PIXEL_WIDTH, TILECACHE_PIXEL_WIDTH);
+    private renderTarget = new THREE.WebGLRenderTarget(TILECACHE_PIXEL_WIDTH, TILECACHE_PIXEL_WIDTH, {
+        //minFilter: THREE.NearestFilter,
+        magFilter: THREE.NearestFilter,
+    });
     private scene = new THREE.Scene();
     private mesh = new THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>(
         new THREE.PlaneGeometry(TILE_WIDTH, TILE_WIDTH),

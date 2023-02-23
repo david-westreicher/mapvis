@@ -1,1 +1,4 @@
-export const QUADTREE_SIZE = 2048;
+export const QUADTREE_SIZE = 8192;
+export const TILECACHE_PIXEL_WIDTH = 8192;
+export const TILE_WIDTH = 256;
+export const TILECACHE_WIDTH = TILECACHE_PIXEL_WIDTH / TILE_WIDTH;
