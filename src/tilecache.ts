@@ -1,11 +1,13 @@
 import * as THREE from 'three';
+import * as Collections from 'typescript-collections';
+import { QUADTREE_SIZE } from './constants';
 
 const TILECACHE_PIXEL_WIDTH = 4096;
 const TILE_WIDTH = 256;
 const TILECACHE_WIDTH = TILECACHE_PIXEL_WIDTH / TILE_WIDTH;
 
 class Tile {
-    private key = '';
+    public key = '';
     public texture: THREE.Texture = null;
 
     constructor(public x: number, public y: number) {}
@@ -16,7 +18,7 @@ class Tile {
             throw new Error('Texture was not disposed correctly');
         }
         new THREE.TextureLoader().load(
-            Math.random() < 0.5 ? 'assets/test.png' : 'assets/terrain.png',
+            `https://tile.openstreetmap.org/${key}.png`,
             async (texture) => {
                 texture.source;
                 this.texture = texture;
@@ -42,10 +44,11 @@ export class TileCache {
         new THREE.MeshBasicMaterial({ map: null })
     );
     private freeTiles: Tile[] = [];
+    private cachedTiles = new Collections.Dictionary<string, Tile>();
+    private downloadingTiles = new Collections.Set<string>();
     private downloadedTiles: Tile[] = [];
-    private colorCache: { [key: string]: number } = {};
 
-    constructor(private renderer: THREE.WebGLRenderer) {
+    constructor(private renderer: THREE.WebGLRenderer, private priorityDownloader = new TilePriorityDownloader()) {
         for (let x = 0; x < TILECACHE_WIDTH; x++) {
             for (let y = 0; y < TILECACHE_WIDTH; y++) {
                 this.freeTiles.push(new Tile(x, y));
@@ -55,21 +58,18 @@ export class TileCache {
         this.renderTarget.scissorTest = true;
         this.mesh.position.set(TILE_WIDTH * 0.5, TILE_WIDTH * 0.5, -1);
         this.scene.add(this.mesh);
-        this.downloadTile(0, 0, 0);
-        this.downloadTile(0, 0, 0);
-        this.downloadTile(0, 0, 0);
-        this.downloadTile(0, 0, 0);
-        this.downloadTile(0, 0, 0);
-        this.downloadTile(0, 0, 0);
-        this.downloadTile(0, 0, 0);
-        this.downloadTile(0, 0, 0);
     }
 
     public get texture(): THREE.Texture {
         return this.renderTarget.texture;
     }
 
-    public update() {
+    public update(visibleTiles: THREE.Vector3[]) {
+        const tilesToDownload = this.priorityDownloader.getTilesToDownload(visibleTiles);
+        for (const tile of tilesToDownload) {
+            if (this.cachedTiles.containsKey(tile) || this.downloadingTiles.contains(tile)) continue;
+            this.downloadTile(tile);
+        }
         while (this.downloadedTiles.length > 0) {
             const tile = this.downloadedTiles.pop();
             this.renderIntoCache(tile);
@@ -92,35 +92,48 @@ export class TileCache {
 
         this.renderer.setRenderTarget(null);
         this.renderer.setViewport(oldViewport);
+
         tile.clear();
     }
 
     public getEncodedTileColor(x: number, y: number, size: number): number {
-        const key = `${x}|${y}|${size}`;
-        if (!(key in this.colorCache)) {
-            const tileNumber = Math.floor(8 * Math.random());
-            let color = 0;
-            color |= (tileNumber / TILECACHE_WIDTH) << 16;
-            color |= tileNumber % TILECACHE_WIDTH << 8;
-            color |= Math.log2(size);
-            this.colorCache[key] = color;
-        }
-        return this.colorCache[key];
+        const key = convertTileToKey(x, y, size);
+        const tile = this.cachedTiles.getValue(key);
+        if (!tile) return 0;
+        let color = 0;
+        color |= tile.x << 16;
+        color |= tile.y << 8;
+        color |= Math.log2(size);
+        return color;
     }
 
-    public downloadTile(x: number, y: number, size: number) {
+    public downloadTile(key: string) {
         const tile = this.freeTiles.pop();
-        const key = `${x}|${y}|${size}`;
+        this.downloadingTiles.add(key);
         tile.download(
             key,
             () => {
+                this.cachedTiles.setValue(tile.key, tile);
                 this.downloadedTiles.push(tile);
             },
             () => {
                 this.freeTiles.push(tile);
+                this.downloadingTiles.remove(key);
             }
         );
     }
+}
+
+class TilePriorityDownloader {
+    public getTilesToDownload(visibleTiles: THREE.Vector3[]): string[] {
+        return visibleTiles.map((tile) => convertTileToKey(tile.x, tile.y, tile.z));
+    }
+}
+
+function convertTileToKey(x: number, y: number, z: number): string {
+    const zoom = Math.log2(QUADTREE_SIZE) - Math.log2(z);
+    const maxY = 2 ** zoom - 1;
+    return `${zoom}/${x / z}/${maxY - y / z}`;
 }
 
 /* TODO: TilePriorityDownloader

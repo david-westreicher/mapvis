@@ -8,6 +8,7 @@ import {
     QUADTREE_VERTEX_SHADER,
 } from './shader';
 import * as CLIPMAP from './clipmap';
+import { QUADTREE_SIZE } from './constants';
 
 export class ThreeDScene {
     protected scene: THREE.Scene = new THREE.Scene();
@@ -26,7 +27,7 @@ export class ThreeDScene {
     private constructCamera(): THREE.Camera {
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 100000000);
         camera.up.set(0, 0, 1);
-        camera.position.set(0, 0, 2000);
+        camera.position.set(0, 0, 10000000);
         return camera;
     }
 
@@ -105,6 +106,9 @@ export class GuiScene {
                         map: {
                             value: quadTreeTexture,
                         },
+                        QUADTREE_WIDTH: {
+                            value: QUADTREE_SIZE,
+                        },
                     },
                     fragmentShader: QUADTREE_DEBUG_FRAGMENT_SHADER,
                     vertexShader: QUADTREE_VERTEX_SHADER,
@@ -153,7 +157,7 @@ export class QuadTreeScene extends ThreeDScene {
     }
 
     public constructFullScreenMesh(quadTreeTexture: THREE.Texture, physicalTexture: THREE.Texture): THREE.Mesh {
-        const planeSize = 1024 * 1024;
+        const planeSize = QUADTREE_SIZE ** 2;
         const planeMesh = new THREE.Mesh(
             new THREE.PlaneGeometry(planeSize, planeSize),
             new THREE.ShaderMaterial({
@@ -163,6 +167,9 @@ export class QuadTreeScene extends ThreeDScene {
                     },
                     textureCache: {
                         value: physicalTexture,
+                    },
+                    QUADTREE_WIDTH: {
+                        value: QUADTREE_SIZE,
                     },
                 },
                 vertexShader: QUADTREE_VERTEX_SHADER,

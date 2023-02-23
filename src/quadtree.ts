@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { TileCache } from './tilecache';
-
-const QUADTREE_SIZE = 1024;
+import { QUADTREE_SIZE } from './constants';
 
 class VectorCache {
     private tmpVectors = Array.from({ length: 10000 }, () => new THREE.Vector3());
