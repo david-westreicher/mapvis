@@ -17,7 +17,7 @@ document.body.appendChild(stats.dom);
 const tileCache = new TileCache(renderer);
 const quadtree = new Quadtree(renderer, tileCache);
 const quadtreeScene = new QuadTreeScene(renderer, quadtree.texture, tileCache.texture);
-//const clipMapScene = new ClipMapScene(renderer);
+//const clipMapScene = new ClipMapScene(renderer); TODO: reactivate clipmapscene
 const guiScene = new GuiScene(renderer, quadtree.texture, tileCache.texture);
 
 function animate() {
@@ -30,7 +30,7 @@ function animate() {
     const visibleTiles = getTiles(scaledCameraPos);
     tileCache.update(visibleTiles);
     quadtreeScene.update();
-    quadtree.update(scaledCameraPos);
+    quadtree.update(visibleTiles);
     quadtreeScene.render();
     guiScene.render();
     stats.end();

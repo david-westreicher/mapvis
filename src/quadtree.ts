@@ -59,9 +59,9 @@ export class Quadtree {
         };
     }
 
-    public update(camPos: THREE.Vector3) {
+    public update(visibleTiles: THREE.Vector3[]) {
         let i = 0;
-        for (const quadTile of getTiles(camPos)) {
+        for (const quadTile of visibleTiles) {
             if (i >= this.meshes.length) break;
             const mesh = this.meshes[i++];
             mesh.position.set(quadTile.x + quadTile.z / 2, quadTile.y + quadTile.z / 2, -1);
