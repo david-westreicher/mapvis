@@ -17,13 +17,35 @@ class Tile {
             throw new Error('Texture was not disposed correctly');
         }
         new THREE.TextureLoader().load(
-            `https://tile.openstreetmap.org/${key}.png`,
+            //`https://tile.openstreetmap.org/${key}.png`,
+            // http://h0.ortho.tiles.virtualearth.net/tiles/tre12023013031.jpeg?g=131
+            //'http://h2.ortho.tiles.virtualearth.net/tiles/tre12023013.jpeg?g=131',
+            //`http://h2.ortho.tiles.virtualearth.net/tiles/a1202033${this.toBingMapKey(key)}.jpeg?g=139`,
+            // BING format: tiles/{h,a,tre}
+            //              h: aerial with streets
+            //              a: only aerial
+            //              tre: relief + height?
+            `http://h2.ortho.tiles.virtualearth.net/tiles/h120230${this.toBingMapKey(key)}.jpeg?g=139`,
             async (texture) => {
                 this.texture = texture;
                 onFinishedLoading();
             },
             onError
         );
+    }
+
+    private toBingMapKey(key: string): string {
+        let [z, x, y] = key.split('/').map((x) => parseInt(x));
+        const res: string[] = [];
+        while (z > 0) {
+            const quad = (y % 2) * 2 + (x % 2);
+            res.push(quad.toString());
+            x = Math.floor(x / 2);
+            y = Math.floor(y / 2);
+            z -= 1;
+        }
+        //console.log(res.reverse().join(''));
+        return res.reverse().join('');
     }
 
     public clear() {
@@ -38,7 +60,7 @@ export class TileCache {
     private camera = new THREE.OrthographicCamera(0, TILECACHE_PIXEL_WIDTH, TILECACHE_PIXEL_WIDTH, 0);
     private renderTarget = new THREE.WebGLRenderTarget(TILECACHE_PIXEL_WIDTH, TILECACHE_PIXEL_WIDTH, {
         //minFilter: THREE.NearestFilter,
-        magFilter: THREE.NearestFilter,
+        magFilter: THREE.LinearFilter,
     });
     private scene = new THREE.Scene();
     private mesh = new THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>(
@@ -69,6 +91,7 @@ export class TileCache {
         for (const tile of tilesToDownload) {
             if (this.cachedTiles.has(tile)) continue;
             this.downloadTile(tile);
+            break;
         }
         while (this.downloadedTiles.length > 0) {
             const tile = this.downloadedTiles.pop();

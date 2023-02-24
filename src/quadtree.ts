@@ -95,7 +95,7 @@ export function getTiles(camPos: THREE.Vector3): THREE.Vector3[] {
             res.push(new THREE.Vector3(x, y, size));
             continue;
         }
-        if (vectorCache.planeDistanceTo(camPos, x, y, size) > size * 0.7) {
+        if (vectorCache.planeDistanceTo(camPos, x, y, size) > size * 0.7 && size != QUADTREE_SIZE) {
             res.push(new THREE.Vector3(x, y, size));
             continue;
         }
