@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { TileCache } from './tilecache';
-
-const QUADTREE_SIZE = 1024;
+import { QUADTREE_SIZE } from './constants';
 
 class VectorCache {
     private tmpVectors = Array.from({ length: 10000 }, () => new THREE.Vector3());
@@ -60,9 +59,9 @@ export class Quadtree {
         };
     }
 
-    public update(camPos: THREE.Vector3) {
+    public update(visibleTiles: THREE.Vector3[]) {
         let i = 0;
-        for (const quadTile of getTiles(camPos)) {
+        for (const quadTile of visibleTiles) {
             if (i >= this.meshes.length) break;
             const mesh = this.meshes[i++];
             mesh.position.set(quadTile.x + quadTile.z / 2, quadTile.y + quadTile.z / 2, -1);
@@ -96,7 +95,7 @@ export function getTiles(camPos: THREE.Vector3): THREE.Vector3[] {
             res.push(new THREE.Vector3(x, y, size));
             continue;
         }
-        if (vectorCache.planeDistanceTo(camPos, x, y, size) > size * 0.7) {
+        if (vectorCache.planeDistanceTo(camPos, x, y, size) > size * 0.7 && size != QUADTREE_SIZE) {
             res.push(new THREE.Vector3(x, y, size));
             continue;
         }

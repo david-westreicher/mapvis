@@ -1,7 +1,7 @@
 import * as THREE from 'three';
-import { Quadtree } from './quadtree';
+import { Quadtree, getTiles } from './quadtree';
 import { TileCache } from './tilecache';
-import { ClipMapScene, GuiScene, QuadTreeScene } from './scenes';
+import { GuiScene, QuadTreeScene } from './scenes';
 import Stats from 'stats.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -17,19 +17,20 @@ document.body.appendChild(stats.dom);
 const tileCache = new TileCache(renderer);
 const quadtree = new Quadtree(renderer, tileCache);
 const quadtreeScene = new QuadTreeScene(renderer, quadtree.texture, tileCache.texture);
-const clipMapScene = new ClipMapScene(renderer);
+//const clipMapScene = new ClipMapScene(renderer); TODO: reactivate clipmapscene
 const guiScene = new GuiScene(renderer, quadtree.texture, tileCache.texture);
 
 function animate() {
     requestAnimationFrame(animate);
     stats.begin();
-    clipMapScene.update();
-    clipMapScene.render();
+    //clipMapScene.update();
+    //clipMapScene.render();
 
-    tileCache.update();
-    quadtreeScene.update();
     const scaledCameraPos = quadtree.globalToLocal(quadtreeScene.camera.position);
-    quadtree.update(scaledCameraPos);
+    const visibleTiles = getTiles(scaledCameraPos);
+    tileCache.update(visibleTiles);
+    quadtreeScene.update();
+    quadtree.update(visibleTiles);
     quadtreeScene.render();
     guiScene.render();
     stats.end();

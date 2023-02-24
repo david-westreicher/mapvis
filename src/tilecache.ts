@@ -1,11 +1,12 @@
 import * as THREE from 'three';
+import { LRUCache } from 'typescript-lru-cache';
+import { QUADTREE_SIZE, TILE_WIDTH, TILECACHE_PIXEL_WIDTH, TILECACHE_WIDTH } from './constants';
 
-const TILECACHE_PIXEL_WIDTH = 4096;
-const TILE_WIDTH = 256;
-const TILECACHE_WIDTH = TILECACHE_PIXEL_WIDTH / TILE_WIDTH;
+const WORLD_KEY = convertTileToKey(0, 0, 1024);
 
 class Tile {
-    private key = '';
+    public key = '';
+    public downloaded = false;
     public texture: THREE.Texture = null;
 
     constructor(public x: number, public y: number) {}
@@ -15,69 +16,94 @@ class Tile {
         if (this.texture !== null) {
             throw new Error('Texture was not disposed correctly');
         }
-        this.texture = null;
         new THREE.TextureLoader().load(
-            Math.random() < 0.5 ? 'assets/test.png' : 'assets/terrain.png',
+            //`https://tile.openstreetmap.org/${key}.png`,
+            // http://h0.ortho.tiles.virtualearth.net/tiles/tre12023013031.jpeg?g=131
+            //'http://h2.ortho.tiles.virtualearth.net/tiles/tre12023013.jpeg?g=131',
+            //`http://h2.ortho.tiles.virtualearth.net/tiles/a1202033${this.toBingMapKey(key)}.jpeg?g=139`,
+            // BING format: tiles/{h,a,tre}
+            //              h: aerial with streets
+            //              a: only aerial
+            //              tre: relief + height?
+            `http://h2.ortho.tiles.virtualearth.net/tiles/h120230${this.toBingMapKey(key)}.jpeg?g=139`,
             async (texture) => {
-                texture.source;
                 this.texture = texture;
                 onFinishedLoading();
             },
             onError
         );
     }
+
+    private toBingMapKey(key: string): string {
+        let [z, x, y] = key.split('/').map((x) => parseInt(x));
+        const res: string[] = [];
+        while (z > 0) {
+            const quad = (y % 2) * 2 + (x % 2);
+            res.push(quad.toString());
+            x = Math.floor(x / 2);
+            y = Math.floor(y / 2);
+            z -= 1;
+        }
+        //console.log(res.reverse().join(''));
+        return res.reverse().join('');
+    }
+
+    public clear() {
+        this.key = '';
+        this.downloaded = false;
+        if (this.texture) this.texture.dispose();
+        this.texture = null;
+    }
 }
 
 export class TileCache {
     private camera = new THREE.OrthographicCamera(0, TILECACHE_PIXEL_WIDTH, TILECACHE_PIXEL_WIDTH, 0);
-    private renderTarget = new THREE.WebGLRenderTarget(
-        TILECACHE_PIXEL_WIDTH,
-        TILECACHE_PIXEL_WIDTH
-        // TODO: what about Filtering for texture atlas, should we use a texture array instead?
-        /*{
-            minFilter: THREE.NearestFilter,
-            magFilter: THREE.NearestFilter,
-        }*/
-    );
+    private renderTarget = new THREE.WebGLRenderTarget(TILECACHE_PIXEL_WIDTH, TILECACHE_PIXEL_WIDTH, {
+        //minFilter: THREE.NearestFilter,
+        magFilter: THREE.LinearFilter,
+    });
     private scene = new THREE.Scene();
     private mesh = new THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>(
         new THREE.PlaneGeometry(TILE_WIDTH, TILE_WIDTH),
         new THREE.MeshBasicMaterial({ map: null })
     );
-    private freeTiles: Tile[] = [];
+    private cachedTiles = new LRUCache<string, Tile>({ maxSize: TILECACHE_WIDTH ** 2 });
     private downloadedTiles: Tile[] = [];
-    private colorCache: { [key: string]: number } = {};
 
-    constructor(private renderer: THREE.WebGLRenderer) {
+    constructor(private renderer: THREE.WebGLRenderer, private priorityDownloader = new TilePriorityDownloader()) {
         for (let x = 0; x < TILECACHE_WIDTH; x++) {
             for (let y = 0; y < TILECACHE_WIDTH; y++) {
-                this.freeTiles.push(new Tile(x, y));
+                this.cachedTiles.set(`${x}|${y}`, new Tile(x, y));
             }
         }
-        this.freeTiles.reverse();
         this.renderTarget.scissorTest = true;
         this.mesh.position.set(TILE_WIDTH * 0.5, TILE_WIDTH * 0.5, -1);
         this.scene.add(this.mesh);
-        this.downloadTile(0, 0, 0);
-        this.downloadTile(0, 0, 0);
-        this.downloadTile(0, 0, 0);
-        this.downloadTile(0, 0, 0);
-        this.downloadTile(0, 0, 0);
-        this.downloadTile(0, 0, 0);
-        this.downloadTile(0, 0, 0);
-        this.downloadTile(0, 0, 0);
+        this.downloadTile(WORLD_KEY);
     }
 
     public get texture(): THREE.Texture {
         return this.renderTarget.texture;
     }
 
-    public update() {
+    public update(visibleTiles: THREE.Vector3[]) {
+        const tilesToDownload = this.priorityDownloader.getTilesToDownload(visibleTiles);
+        for (const tile of tilesToDownload) {
+            if (this.cachedTiles.has(tile)) continue;
+            this.downloadTile(tile);
+            break;
+        }
         while (this.downloadedTiles.length > 0) {
             const tile = this.downloadedTiles.pop();
             this.renderIntoCache(tile);
-            break; // render one tile per frame
+            //break; // render one tile per frame
         }
+        this.keepWorldInCache();
+    }
+
+    public keepWorldInCache() {
+        const tile = this.cachedTiles.get(WORLD_KEY);
+        if (tile) this.cachedTiles.set(WORLD_KEY, tile);
     }
 
     public renderIntoCache(tile: Tile) {
@@ -95,33 +121,68 @@ export class TileCache {
 
         this.renderer.setRenderTarget(null);
         this.renderer.setViewport(oldViewport);
-        tile.texture.dispose();
+
+        tile.clear();
+        tile.downloaded = true;
     }
 
     public getEncodedTileColor(x: number, y: number, size: number): number {
-        const key = `${x}|${y}|${size}`;
-        if (!(key in this.colorCache)) {
-            const tileNumber = Math.floor(8 * Math.random());
-            let color = 0;
-            color |= (tileNumber / TILECACHE_WIDTH) << 16;
-            color |= tileNumber % TILECACHE_WIDTH << 8;
-            color |= Math.log2(size);
-            this.colorCache[key] = color;
+        const key = convertTileToKey(x, y, size);
+        const tile = this.cachedTiles.get(key);
+        if (!tile || !tile.downloaded) {
+            if (size == QUADTREE_SIZE) return Math.log2(QUADTREE_SIZE);
+            const nextSize = size * 2;
+            return this.getEncodedTileColor(
+                Math.floor(x / nextSize) * nextSize,
+                Math.floor(y / nextSize) * nextSize,
+                nextSize
+            );
         }
-        return this.colorCache[key];
+        let color = 0;
+        color |= tile.x << 16;
+        color |= tile.y << 8;
+        color |= Math.log2(size);
+        return color;
     }
 
-    public downloadTile(x: number, y: number, size: number) {
-        const tile = this.freeTiles.pop();
-        const key = `${x}|${y}|${size}`;
+    public downloadTile(key: string) {
+        const tile = this.cachedTiles.oldest.value;
+        tile.clear();
+        tile.key = key;
+        this.cachedTiles.set(tile.key, tile);
         tile.download(
             key,
             () => {
                 this.downloadedTiles.push(tile);
             },
             () => {
-                this.freeTiles.push(tile);
+                tile.clear();
             }
         );
     }
 }
+
+class TilePriorityDownloader {
+    public getTilesToDownload(visibleTiles: THREE.Vector3[]): string[] {
+        return visibleTiles.map((tile) => convertTileToKey(tile.x, tile.y, tile.z));
+    }
+}
+
+function convertTileToKey(x: number, y: number, z: number): string {
+    const zoom = Math.log2(QUADTREE_SIZE) - Math.log2(z);
+    const maxY = 2 ** zoom - 1;
+    return `${zoom}/${x / z}/${maxY - y / z}`;
+}
+
+/* TODO: TilePriorityDownloader
+         use 2 LRU caches:
+              * lru_priority[tileKey]: should store how many frames the tile is already visible
+              * lru_lastframevis[tileKey]: stores on which frame the tile was last visible
+         every frame get a list of visible tiles:
+              * if tile is already in texture cache => skip
+              * if tile not in lru_priority or lru_lastframevis[tile] != curr_frame - 1 =>
+                      lru_priority[tile] = 1, lru_lastframevis[tile] = curr_frame
+              * if tile in lru_priority and lru_lastframevis[tile] == curr_frame - 1 =>
+                      lru_priority[tile] += 1, lru_lastframevis[tile] = curr_frame
+                      if lru_priority[tile] is now > 30 => download tile
+*/
