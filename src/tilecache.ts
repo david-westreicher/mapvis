@@ -1,9 +1,12 @@
 import * as THREE from 'three';
-import * as Collections from 'typescript-collections';
+import { LRUCache } from 'typescript-lru-cache';
 import { QUADTREE_SIZE, TILE_WIDTH, TILECACHE_PIXEL_WIDTH, TILECACHE_WIDTH } from './constants';
+
+const WORLD_KEY = convertTileToKey(0, 0, 1024);
 
 class Tile {
     public key = '';
+    public downloaded = false;
     public texture: THREE.Texture = null;
 
     constructor(public x: number, public y: number) {}
@@ -25,7 +28,8 @@ class Tile {
 
     public clear() {
         this.key = '';
-        this.texture.dispose();
+        this.downloaded = false;
+        if (this.texture) this.texture.dispose();
         this.texture = null;
     }
 }
@@ -41,21 +45,19 @@ export class TileCache {
         new THREE.PlaneGeometry(TILE_WIDTH, TILE_WIDTH),
         new THREE.MeshBasicMaterial({ map: null })
     );
-    private freeTiles: Tile[] = [];
-    private cachedTiles = new Collections.Dictionary<string, Tile>();
-    private downloadingTiles = new Collections.Set<string>();
+    private cachedTiles = new LRUCache<string, Tile>({ maxSize: TILECACHE_WIDTH ** 2 });
     private downloadedTiles: Tile[] = [];
 
     constructor(private renderer: THREE.WebGLRenderer, private priorityDownloader = new TilePriorityDownloader()) {
         for (let x = 0; x < TILECACHE_WIDTH; x++) {
             for (let y = 0; y < TILECACHE_WIDTH; y++) {
-                this.freeTiles.push(new Tile(x, y));
+                this.cachedTiles.set(`${x}|${y}`, new Tile(x, y));
             }
         }
-        this.freeTiles.reverse();
         this.renderTarget.scissorTest = true;
         this.mesh.position.set(TILE_WIDTH * 0.5, TILE_WIDTH * 0.5, -1);
         this.scene.add(this.mesh);
+        this.downloadTile(WORLD_KEY);
     }
 
     public get texture(): THREE.Texture {
@@ -65,14 +67,20 @@ export class TileCache {
     public update(visibleTiles: THREE.Vector3[]) {
         const tilesToDownload = this.priorityDownloader.getTilesToDownload(visibleTiles);
         for (const tile of tilesToDownload) {
-            if (this.cachedTiles.containsKey(tile) || this.downloadingTiles.contains(tile)) continue;
+            if (this.cachedTiles.has(tile)) continue;
             this.downloadTile(tile);
         }
         while (this.downloadedTiles.length > 0) {
             const tile = this.downloadedTiles.pop();
             this.renderIntoCache(tile);
-            break; // render one tile per frame
+            //break; // render one tile per frame
         }
+        this.keepWorldInCache();
+    }
+
+    public keepWorldInCache() {
+        const tile = this.cachedTiles.get(WORLD_KEY);
+        if (tile) this.cachedTiles.set(WORLD_KEY, tile);
     }
 
     public renderIntoCache(tile: Tile) {
@@ -92,12 +100,13 @@ export class TileCache {
         this.renderer.setViewport(oldViewport);
 
         tile.clear();
+        tile.downloaded = true;
     }
 
     public getEncodedTileColor(x: number, y: number, size: number): number {
         const key = convertTileToKey(x, y, size);
-        const tile = this.cachedTiles.getValue(key);
-        if (!tile) {
+        const tile = this.cachedTiles.get(key);
+        if (!tile || !tile.downloaded) {
             if (size == QUADTREE_SIZE) return Math.log2(QUADTREE_SIZE);
             const nextSize = size * 2;
             return this.getEncodedTileColor(
@@ -114,18 +123,17 @@ export class TileCache {
     }
 
     public downloadTile(key: string) {
-        if (this.freeTiles.length == 0) return;
-        const tile = this.freeTiles.pop();
-        this.downloadingTiles.add(key);
+        const tile = this.cachedTiles.oldest.value;
+        tile.clear();
+        tile.key = key;
+        this.cachedTiles.set(tile.key, tile);
         tile.download(
             key,
             () => {
-                this.cachedTiles.setValue(tile.key, tile);
                 this.downloadedTiles.push(tile);
             },
             () => {
-                this.freeTiles.push(tile);
-                this.downloadingTiles.remove(key);
+                tile.clear();
             }
         );
     }

@@ -21,13 +21,14 @@ export class ThreeDScene {
         controls.screenSpacePanning = false;
         controls.target.set(0, 0, 100);
         controls.maxPolarAngle = Math.PI * 0.5;
+        controls.enableDamping = false;
         return controls;
     }
 
     private constructCamera(): THREE.Camera {
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 100000000);
         camera.up.set(0, 0, 1);
-        camera.position.set(0, 0, 10000000);
+        camera.position.set(0, 0, 100000000);
         return camera;
     }
 
