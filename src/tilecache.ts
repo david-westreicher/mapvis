@@ -16,7 +16,6 @@ class Tile {
         new THREE.TextureLoader().load(
             `https://tile.openstreetmap.org/${key}.png`,
             async (texture) => {
-                texture.source;
                 this.texture = texture;
                 onFinishedLoading();
             },
@@ -98,7 +97,15 @@ export class TileCache {
     public getEncodedTileColor(x: number, y: number, size: number): number {
         const key = convertTileToKey(x, y, size);
         const tile = this.cachedTiles.getValue(key);
-        if (!tile) return 0;
+        if (!tile) {
+            if (size == QUADTREE_SIZE) return Math.log2(QUADTREE_SIZE);
+            const nextSize = size * 2;
+            return this.getEncodedTileColor(
+                Math.floor(x / nextSize) * nextSize,
+                Math.floor(y / nextSize) * nextSize,
+                nextSize
+            );
+        }
         let color = 0;
         color |= tile.x << 16;
         color |= tile.y << 8;
@@ -107,6 +114,7 @@ export class TileCache {
     }
 
     public downloadTile(key: string) {
+        if (this.freeTiles.length == 0) return;
         const tile = this.freeTiles.pop();
         this.downloadingTiles.add(key);
         tile.download(

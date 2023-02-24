@@ -47,7 +47,7 @@ export const QUADTREE_FRAGMENT_SHADER = `
         float tileSize = exp2(indirectionMap.b * 255.0);
         vec2 tileCoord = vec2(indirectionMap.r, indirectionMap.g) * 255.0 / TILECACHE_WIDTH;
         vec2 inTileCoord = mod(uvVar * QUADTREE_WIDTH, tileSize);
-        float fac = 255.5/256.0;
+        float fac = 255.0/256.0;
         gl_FragColor = texture2D(textureCache, (inTileCoord / tileSize / TILECACHE_WIDTH)*fac + tileCoord + 0.5/TILECACHE_PIXEL_WIDTH);
     }
 `;
