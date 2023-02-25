@@ -99,7 +99,12 @@ export class GuiScene {
     private scene: THREE.Scene = new THREE.Scene();
     private static readonly PLANE_SIZE = 200;
 
-    constructor(private renderer: THREE.WebGLRenderer, quadTreeTexture: THREE.Texture, physicalTexture: THREE.Texture) {
+    constructor(
+        private renderer: THREE.WebGLRenderer,
+        quadTreeTexture: THREE.Texture,
+        colorTexture: THREE.Texture,
+        heightTexture: THREE.Texture
+    ) {
         this.scene.add(
             this.constructFullScreenMesh(
                 new THREE.ShaderMaterial({
@@ -116,7 +121,8 @@ export class GuiScene {
                 })
             )
         );
-        this.scene.add(this.constructFullScreenMesh(new THREE.MeshBasicMaterial({ map: physicalTexture })));
+        this.scene.add(this.constructFullScreenMesh(new THREE.MeshBasicMaterial({ map: colorTexture })));
+        this.scene.add(this.constructFullScreenMesh(new THREE.MeshBasicMaterial({ map: heightTexture })));
     }
 
     public constructFullScreenMesh(material: THREE.Material): THREE.Mesh {
@@ -142,10 +148,11 @@ export class QuadTreeScene extends ThreeDScene {
     constructor(
         protected renderer: THREE.WebGLRenderer,
         quadTreeTexture: THREE.Texture,
-        physicalTexture: THREE.Texture
+        colorTexture: THREE.Texture,
+        heightTexture: THREE.Texture
     ) {
         super(renderer);
-        this.scene.add(this.constructFullScreenMesh(quadTreeTexture, physicalTexture));
+        this.scene.add(this.constructFullScreenMesh(quadTreeTexture, colorTexture, heightTexture));
         this.scene.add(this.cameraMesh);
     }
 
@@ -157,7 +164,11 @@ export class QuadTreeScene extends ThreeDScene {
         this.cameraMesh.scale.setScalar(scale);
     }
 
-    public constructFullScreenMesh(quadTreeTexture: THREE.Texture, physicalTexture: THREE.Texture): THREE.Mesh {
+    public constructFullScreenMesh(
+        quadTreeTexture: THREE.Texture,
+        colorTexture: THREE.Texture,
+        heightTexture: THREE.Texture
+    ): THREE.Mesh {
         const planeSize = QUADTREE_SIZE ** 2;
         const planeMesh = new THREE.Mesh(
             new THREE.PlaneGeometry(planeSize, planeSize),
@@ -166,8 +177,11 @@ export class QuadTreeScene extends ThreeDScene {
                     quadMap: {
                         value: quadTreeTexture,
                     },
-                    textureCache: {
-                        value: physicalTexture,
+                    colorTextureCache: {
+                        value: colorTexture,
+                    },
+                    heightTextureCache: {
+                        value: heightTexture,
                     },
                     QUADTREE_WIDTH: {
                         value: QUADTREE_SIZE,

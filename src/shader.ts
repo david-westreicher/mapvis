@@ -34,21 +34,38 @@ export const QUADTREE_VERTEX_SHADER = `
         gl_Position = projectionMatrix * mvPosition;
     }
 `;
-export const QUADTREE_FRAGMENT_SHADER = `
+
+export const VIRTUAL_TEXTURE_FUNCTIONALITY = `
     uniform sampler2D quadMap;
-    uniform sampler2D textureCache;
     uniform float QUADTREE_WIDTH;
     uniform float TILECACHE_WIDTH;
     uniform float TILECACHE_PIXEL_WIDTH;
+
     varying vec2 uvVar;
 
-    void main() {
+    vec2 physicalTextureCoord() {
         vec4 indirectionMap = texture2D(quadMap, uvVar);
         float tileSize = exp2(indirectionMap.b * 255.0);
         vec2 tileCoord = vec2(indirectionMap.r, indirectionMap.g) * 255.0 / TILECACHE_WIDTH;
         vec2 inTileCoord = mod(uvVar * QUADTREE_WIDTH, tileSize);
         float fac = 255.0/256.0;
-        gl_FragColor = texture2D(textureCache, (inTileCoord / tileSize / TILECACHE_WIDTH)*fac + tileCoord + 0.5/TILECACHE_PIXEL_WIDTH);
+        vec2 textureCoord = (inTileCoord / tileSize / TILECACHE_WIDTH)*fac + tileCoord + 0.5/TILECACHE_PIXEL_WIDTH;
+        return textureCoord;
+    }
+
+`;
+
+export const QUADTREE_FRAGMENT_SHADER = `
+    ${VIRTUAL_TEXTURE_FUNCTIONALITY}
+    uniform sampler2D colorTextureCache;
+    uniform sampler2D heightTextureCache;
+
+    void main() {
+        vec2 textureCoord = physicalTextureCoord();
+        vec3 colorTex = texture2D(colorTextureCache, textureCoord).rgb;
+        vec3 heightTex = texture2D(heightTextureCache, textureCoord).rgb;
+        float elevation = ((heightTex.r*256.0 * 256.0 + heightTex.g * 256.0 + heightTex.b)  - 32768.0) / 8000.0;
+        gl_FragColor = vec4(colorTex * elevation, 1.0);
     }
 `;
 export const QUADTREE_DEBUG_FRAGMENT_SHADER = `

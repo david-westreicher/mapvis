@@ -16,9 +16,9 @@ document.body.appendChild(stats.dom);
 
 const tileCache = new TileCache(renderer);
 const quadtree = new Quadtree(renderer, tileCache);
-const quadtreeScene = new QuadTreeScene(renderer, quadtree.texture, tileCache.texture);
+const quadtreeScene = new QuadTreeScene(renderer, quadtree.texture, tileCache.colorTexture, tileCache.heightTexture);
 //const clipMapScene = new ClipMapScene(renderer); TODO: reactivate clipmapscene
-const guiScene = new GuiScene(renderer, quadtree.texture, tileCache.texture);
+const guiScene = new GuiScene(renderer, quadtree.texture, tileCache.colorTexture, tileCache.heightTexture);
 
 function animate() {
     requestAnimationFrame(animate);
