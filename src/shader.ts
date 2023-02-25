@@ -35,15 +35,13 @@ export const QUADTREE_VERTEX_SHADER = `
     }
 `;
 
-export const VIRTUAL_TEXTURE_FUNCTIONALITY = `
+const VIRTUAL_TEXTURE_FUNCTIONALITY = `
     uniform sampler2D quadMap;
     uniform float QUADTREE_WIDTH;
     uniform float TILECACHE_WIDTH;
     uniform float TILECACHE_PIXEL_WIDTH;
 
-    varying vec2 uvVar;
-
-    vec2 physicalTextureCoord() {
+    vec2 physicalTextureCoord(vec2 uvVar) {
         vec4 indirectionMap = texture2D(quadMap, uvVar);
         float tileSize = exp2(indirectionMap.b * 255.0);
         vec2 tileCoord = vec2(indirectionMap.r, indirectionMap.g) * 255.0 / TILECACHE_WIDTH;
@@ -60,8 +58,10 @@ export const QUADTREE_FRAGMENT_SHADER = `
     uniform sampler2D colorTextureCache;
     uniform sampler2D heightTextureCache;
 
+    varying vec2 uvVar;
+
     void main() {
-        vec2 textureCoord = physicalTextureCoord();
+        vec2 textureCoord = physicalTextureCoord(uvVar);
         vec3 colorTex = texture2D(colorTextureCache, textureCoord).rgb;
         vec3 heightTex = texture2D(heightTextureCache, textureCoord).rgb;
         float elevation = ((heightTex.r*256.0 * 256.0 + heightTex.g * 256.0 + heightTex.b)  - 32768.0) / 8000.0;

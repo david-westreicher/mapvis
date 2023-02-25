@@ -3,7 +3,6 @@ import { LRUCache } from 'typescript-lru-cache';
 import { QUADTREE_SIZE, TILE_WIDTH, TILECACHE_PIXEL_WIDTH, TILECACHE_WIDTH } from './constants';
 
 const ALWAYS_IN_CACHE = [
-    convertTileToKey(0, 0, QUADTREE_SIZE),
     convertTileToKey(0, 0, QUADTREE_SIZE * 0.5),
     convertTileToKey(0, QUADTREE_SIZE * 0.5, QUADTREE_SIZE * 0.5),
     convertTileToKey(QUADTREE_SIZE * 0.5, 0, QUADTREE_SIZE * 0.5),
@@ -122,7 +121,7 @@ export class TileCache {
     private colorCache: TileCacheTexture;
     private heightCache: TileCacheTexture;
 
-    constructor(private renderer: THREE.WebGLRenderer, private priorityDownloader = new TilePriorityDownloader()) {
+    constructor(renderer: THREE.WebGLRenderer, private priorityDownloader = new TilePriorityDownloader()) {
         this.colorCache = new TileCacheTexture(renderer);
         this.heightCache = new TileCacheTexture(renderer);
         for (let x = 0; x < TILECACHE_WIDTH; x++) {
