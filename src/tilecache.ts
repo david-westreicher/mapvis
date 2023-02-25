@@ -79,7 +79,7 @@ class Tile {
 class TileCacheTexture {
     private camera = new THREE.OrthographicCamera(0, TILECACHE_PIXEL_WIDTH, TILECACHE_PIXEL_WIDTH, 0);
     private renderTarget = new THREE.WebGLRenderTarget(TILECACHE_PIXEL_WIDTH, TILECACHE_PIXEL_WIDTH, {
-        //minFilter: THREE.NearestFilter,
+        minFilter: THREE.NearestFilter,
         magFilter: THREE.LinearFilter,
     });
     private scene = new THREE.Scene();
@@ -153,7 +153,6 @@ export class TileCache {
             this.heightCache.renderIntoCache(tile, false);
             tile.clear();
             tile.downloaded = true;
-            //break; // render one tile per frame
         }
         this.keepWorldInCache();
     }

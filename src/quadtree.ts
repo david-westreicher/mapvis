@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { TileCache } from './tilecache';
-import { QUADTREE_SIZE } from './constants';
+import { QUADTREE_SIZE, WORLD_SIZE } from './constants';
 
 class VectorCache {
     private tmpVectors = Array.from({ length: 10000 }, () => new THREE.Vector3());
@@ -79,7 +79,7 @@ export class Quadtree {
     public globalToLocal(pos: THREE.Vector3): THREE.Vector3 {
         return pos
             .clone()
-            .multiplyScalar(1 / QUADTREE_SIZE)
+            .multiplyScalar(QUADTREE_SIZE / WORLD_SIZE)
             .add(new THREE.Vector3(QUADTREE_SIZE * 0.5, QUADTREE_SIZE * 0.5, 0));
     }
 }
@@ -104,5 +104,5 @@ export function getTiles(camPos: THREE.Vector3): THREE.Vector3[] {
         stack.push(vectorCache.get(x, y + size / 2, size / 2));
         stack.push(vectorCache.get(x + size / 2, y + size / 2, size / 2));
     }
-    return res;
+    return res; // TODO: sort tiles by distance from camera
 }
