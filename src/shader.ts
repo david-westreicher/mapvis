@@ -15,7 +15,7 @@ const VIRTUAL_TEXTURE_FUNCTIONALITY = `
 
     float elevation(sampler2D height, vec2 uv) {
         vec3 heightTex = texture2D(height, uv).rgb;
-        return ((heightTex.r*256.0 * 256.0 + heightTex.g * 256.0 + heightTex.b)  - 32768.0) / 50.0 - 14.0;
+        return ((heightTex.r*256.0 * 256.0 + heightTex.g * 256.0 + heightTex.b)  - 32768.0) / 50.0;
     }
 
 `;
@@ -30,7 +30,7 @@ export const HEIGHT_VERTEX_SHADER = `
     varying vec2 uv2D;
 
     void main() {
-        float gridSnap = 1.0;//max(256.0, floor(camPos.z * 0.5) * 2.0);
+        float gridSnap = 1.0;//max(1.0, floor(camPos.z * 0.5) * 2.0);
         vec2 offset = floor(camPos.xy / gridSnap + 0.5) * gridSnap;
         vec2 pos2D = (position.xy + offset);
         uv2D = clamp(pos2D / WORLD_SIZE + 0.5, 0.0, 1.0);

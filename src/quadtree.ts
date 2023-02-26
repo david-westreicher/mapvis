@@ -111,3 +111,20 @@ export function getTiles(camPos: THREE.Vector3): THREE.Vector3[] {
     );
     return res; // TODO: sort tiles by distance from camera
 }
+
+export function getTilesVisitor(visitor: (x: number, y: number, size: number) => boolean) {
+    vectorCache.reset();
+    const stack = [vectorCache.get(0, 0, QUADTREE_SIZE)];
+    while (stack.length) {
+        const { x, y, z } = stack.pop();
+        const shoudContinue = visitor(x, y, z);
+        const size = z;
+        if (!shoudContinue || size == 1) {
+            continue;
+        }
+        stack.push(vectorCache.get(x, y, size / 2));
+        stack.push(vectorCache.get(x + size / 2, y, size / 2));
+        stack.push(vectorCache.get(x, y + size / 2, size / 2));
+        stack.push(vectorCache.get(x + size / 2, y + size / 2, size / 2));
+    }
+}

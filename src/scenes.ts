@@ -14,7 +14,7 @@ import { Quadtree } from './quadtree';
 export class ThreeDScene {
     protected scene: THREE.Scene = new THREE.Scene();
     public camera: THREE.PerspectiveCamera = this.constructCamera();
-    protected controls: OrbitControls = this.constructControls();
+    public controls: OrbitControls = this.constructControls();
     constructor(protected renderer: THREE.Renderer) {}
 
     private constructControls(): OrbitControls {
@@ -43,11 +43,12 @@ export class ThreeDScene {
 }
 
 export class ClipMapScene extends ThreeDScene {
+    public meshes: THREE.Mesh[] = [];
     constructor(protected renderer: THREE.WebGLRenderer, colorQuadtree: Quadtree, heightQuadtree: Quadtree) {
         super(renderer);
         const shaderUniforms: { [uniform: string]: THREE.IUniform } = {
             camPos: {
-                value: this.camera.position,
+                value: this.camera.position, //TODO z-axis should use CPU height
             },
             colorQuadMap: {
                 value: colorQuadtree.texture,
@@ -76,6 +77,19 @@ export class ClipMapScene extends ThreeDScene {
         };
         const clipMapMesh = this.constructMesh(shaderUniforms);
         this.scene.add(clipMapMesh);
+        for (let i = 0; i < 100; i++) {
+            const mesh = new THREE.Mesh(
+                new THREE.BoxGeometry(1, 1, 1),
+                new THREE.MeshBasicMaterial({ color: 0x000000 })
+            );
+            mesh.position.z = 100;
+            this.meshes.push(mesh);
+            this.scene.add(mesh);
+        }
+    }
+
+    public update(): void {
+        super.update();
     }
 
     private constructMesh(uniforms: {
