@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import * as Collections from 'typescript-collections';
+import { WORLD_SIZE } from './constants';
 
 class Point {
     constructor(public x: number, public y: number, public cellWidth: number) {
@@ -10,8 +11,8 @@ class Point {
     toString(): string {
         return this.x + '|' + this.y;
     }
-    toArray(): number[] {
-        return [this.x, this.y, this.cellWidth];
+    toArray(scale: number): number[] {
+        return [this.x * scale, this.y * scale, this.cellWidth];
     }
 }
 
@@ -62,7 +63,7 @@ function buildGridHelper(
 
      */
     if (level < 0) return;
-    const cellWidth = 2 ** level * 20;
+    const cellWidth = 2 ** level;
     const midOffset = -width / 2;
 
     // generate grid recursively
@@ -152,14 +153,14 @@ function buildGridHelper(
     }
 }
 
-export function buildGeometry(level: number, width: number): THREE.BufferGeometry {
+export function buildGeometry(level = 14, width = 200): THREE.BufferGeometry {
     if (width % 4 !== 0) throw new Error('Width has to be a multiple of 4');
     const points = new Collections.Dictionary<Point, number>();
     const triangles: number[][] = [];
     buildGridHelper(level, width, points, triangles);
 
     const totalWidth = width * 2 ** level;
-    const vertices = points.keys().map((point) => point.toArray());
+    const vertices = points.keys().map((point) => point.toArray((2 * WORLD_SIZE) / totalWidth));
     console.log(
         `Created clipmap with ${vertices.length} vertices and ${triangles.length} triangles, width ${totalWidth}m`
     );

@@ -8,27 +8,28 @@ import {
     QUADTREE_VERTEX_SHADER,
 } from './shader';
 import * as CLIPMAP from './clipmap';
-import { QUADTREE_SIZE, TILECACHE_WIDTH, TILECACHE_PIXEL_WIDTH } from './constants';
+import { QUADTREE_SIZE, TILECACHE_WIDTH, TILECACHE_PIXEL_WIDTH, WORLD_SIZE } from './constants';
+import { Quadtree } from './quadtree';
 
 export class ThreeDScene {
     protected scene: THREE.Scene = new THREE.Scene();
-    public camera: THREE.Camera = this.constructCamera();
+    public camera: THREE.PerspectiveCamera = this.constructCamera();
     protected controls: OrbitControls = this.constructControls();
     constructor(protected renderer: THREE.Renderer) {}
 
     private constructControls(): OrbitControls {
         const controls = new OrbitControls(this.camera, this.renderer.domElement);
         controls.screenSpacePanning = false;
-        controls.target.set(0, 0, 100);
+        controls.target.set(0, 0, 0);
         controls.maxPolarAngle = Math.PI * 0.5;
         controls.enableDamping = false;
         return controls;
     }
 
-    private constructCamera(): THREE.Camera {
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 100000000);
+    private constructCamera(): THREE.PerspectiveCamera {
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 20000);
         camera.up.set(0, 0, 1);
-        camera.position.set(0, 0, 100000000);
+        camera.position.set(0, 0, WORLD_SIZE * 0.5);
         return camera;
     }
 
@@ -42,54 +43,54 @@ export class ThreeDScene {
 }
 
 export class ClipMapScene extends ThreeDScene {
-    constructor(protected renderer: THREE.Renderer, private addWireframe: boolean = false) {
+    constructor(protected renderer: THREE.WebGLRenderer, colorQuadtree: Quadtree, heightQuadtree: Quadtree) {
         super(renderer);
-        const clipMapMesh = this.constructMesh();
+        const shaderUniforms: { [uniform: string]: THREE.IUniform } = {
+            camPos: {
+                value: this.camera.position,
+            },
+            colorQuadMap: {
+                value: colorQuadtree.texture,
+            },
+            colorTextureCache: {
+                value: colorQuadtree.tileCache.texture,
+            },
+            heightQuadMap: {
+                value: heightQuadtree.texture,
+            },
+            heightTextureCache: {
+                value: heightQuadtree.tileCache.texture,
+            },
+            QUADTREE_WIDTH: {
+                value: QUADTREE_SIZE,
+            },
+            TILECACHE_WIDTH: {
+                value: TILECACHE_WIDTH,
+            },
+            TILECACHE_PIXEL_WIDTH: {
+                value: TILECACHE_PIXEL_WIDTH,
+            },
+            WORLD_SIZE: {
+                value: WORLD_SIZE,
+            },
+        };
+        const clipMapMesh = this.constructMesh(shaderUniforms);
         this.scene.add(clipMapMesh);
-        if (this.addWireframe)
-            this.scene.add(new THREE.Mesh(clipMapMesh.geometry, this.generateWireFrameMaterial(clipMapMesh.material)));
     }
 
-    private constructMesh(): THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial> {
-        const heightMap = new THREE.TextureLoader().load(
-            'assets/terrain2.png'
-            //'https://ecn.t1.tiles.virtualearth.net/tiles/a12022131232333223.jpeg?g=13352'
-        );
-        heightMap.wrapS = THREE.MirroredRepeatWrapping;
-        heightMap.wrapT = THREE.MirroredRepeatWrapping;
-        heightMap.minFilter = THREE.LinearMipMapLinearFilter;
-
+    private constructMesh(uniforms: {
+        [uniform: string]: THREE.IUniform;
+    }): THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial> {
         const clipMapMaterial = new THREE.ShaderMaterial({
-            uniforms: {
-                heightMap: {
-                    value: heightMap,
-                },
-                camPos: {
-                    value: this.camera.position,
-                },
-                heightScale: {
-                    value: 2000.0,
-                },
-                col: {
-                    value: [1.0, 1.0, 1.0],
-                },
-            },
+            uniforms,
             vertexShader: HEIGHT_VERTEX_SHADER,
             fragmentShader: HEIGHT_FRAGMENT_SHADER,
             side: THREE.FrontSide,
             wireframe: false,
         });
-        const geometry = CLIPMAP.buildGeometry(5, 200);
-        return new THREE.Mesh(geometry, clipMapMaterial);
-    }
-
-    private generateWireFrameMaterial(otherMaterial: THREE.ShaderMaterial) {
-        const material = new THREE.ShaderMaterial();
-        material.copy(otherMaterial);
-        material.uniforms.camPos = { value: this.camera };
-        material.uniforms.col = { value: [0.5, 1.0, 0.0] };
-        material.wireframe = true;
-        return material;
+        const geometry = CLIPMAP.buildGeometry();
+        const mesh = new THREE.Mesh(geometry, clipMapMaterial);
+        return mesh;
     }
 }
 
@@ -99,24 +100,30 @@ export class GuiScene {
     private scene: THREE.Scene = new THREE.Scene();
     private static readonly PLANE_SIZE = 200;
 
-    constructor(private renderer: THREE.WebGLRenderer, quadTreeTexture: THREE.Texture, physicalTexture: THREE.Texture) {
+    constructor(private renderer: THREE.WebGLRenderer, colorQuadtree: Quadtree, heightQuadtree: Quadtree) {
+        this.scene.add(this.constructFullScreenMesh(this.getDebugShader(colorQuadtree)));
         this.scene.add(
-            this.constructFullScreenMesh(
-                new THREE.ShaderMaterial({
-                    uniforms: {
-                        map: {
-                            value: quadTreeTexture,
-                        },
-                        QUADTREE_WIDTH: {
-                            value: QUADTREE_SIZE,
-                        },
-                    },
-                    fragmentShader: QUADTREE_DEBUG_FRAGMENT_SHADER,
-                    vertexShader: QUADTREE_VERTEX_SHADER,
-                })
-            )
+            this.constructFullScreenMesh(new THREE.MeshBasicMaterial({ map: colorQuadtree.tileCache.texture }))
         );
-        this.scene.add(this.constructFullScreenMesh(new THREE.MeshBasicMaterial({ map: physicalTexture })));
+        this.scene.add(this.constructFullScreenMesh(this.getDebugShader(heightQuadtree)));
+        this.scene.add(
+            this.constructFullScreenMesh(new THREE.MeshBasicMaterial({ map: heightQuadtree.tileCache.texture }))
+        );
+    }
+
+    private getDebugShader(quadTree: Quadtree) {
+        return new THREE.ShaderMaterial({
+            uniforms: {
+                map: {
+                    value: quadTree.texture,
+                },
+                QUADTREE_WIDTH: {
+                    value: QUADTREE_SIZE,
+                },
+            },
+            fragmentShader: QUADTREE_DEBUG_FRAGMENT_SHADER,
+            vertexShader: QUADTREE_VERTEX_SHADER,
+        });
     }
 
     public constructFullScreenMesh(material: THREE.Material): THREE.Mesh {
@@ -142,10 +149,11 @@ export class QuadTreeScene extends ThreeDScene {
     constructor(
         protected renderer: THREE.WebGLRenderer,
         quadTreeTexture: THREE.Texture,
-        physicalTexture: THREE.Texture
+        colorTexture: THREE.Texture,
+        heightTexture: THREE.Texture
     ) {
         super(renderer);
-        this.scene.add(this.constructFullScreenMesh(quadTreeTexture, physicalTexture));
+        this.scene.add(this.constructFullScreenMesh(quadTreeTexture, colorTexture, heightTexture));
         this.scene.add(this.cameraMesh);
     }
 
@@ -157,8 +165,12 @@ export class QuadTreeScene extends ThreeDScene {
         this.cameraMesh.scale.setScalar(scale);
     }
 
-    public constructFullScreenMesh(quadTreeTexture: THREE.Texture, physicalTexture: THREE.Texture): THREE.Mesh {
-        const planeSize = QUADTREE_SIZE ** 2;
+    public constructFullScreenMesh(
+        quadTreeTexture: THREE.Texture,
+        colorTexture: THREE.Texture,
+        heightTexture: THREE.Texture
+    ): THREE.Mesh {
+        const planeSize = WORLD_SIZE;
         const planeMesh = new THREE.Mesh(
             new THREE.PlaneGeometry(planeSize, planeSize),
             new THREE.ShaderMaterial({
@@ -166,8 +178,11 @@ export class QuadTreeScene extends ThreeDScene {
                     quadMap: {
                         value: quadTreeTexture,
                     },
-                    textureCache: {
-                        value: physicalTexture,
+                    colorTextureCache: {
+                        value: colorTexture,
+                    },
+                    heightTextureCache: {
+                        value: heightTexture,
                     },
                     QUADTREE_WIDTH: {
                         value: QUADTREE_SIZE,

@@ -2,36 +2,62 @@ import * as THREE from 'three';
 import { LRUCache } from 'typescript-lru-cache';
 import { QUADTREE_SIZE, TILE_WIDTH, TILECACHE_PIXEL_WIDTH, TILECACHE_WIDTH } from './constants';
 
-const WORLD_KEY = convertTileToKey(0, 0, 1024);
+const ALWAYS_IN_CACHE = [
+    convertTileToKey(0, 0, QUADTREE_SIZE),
+    convertTileToKey(0, 0, QUADTREE_SIZE * 0.5),
+    convertTileToKey(0, QUADTREE_SIZE * 0.5, QUADTREE_SIZE * 0.5),
+    convertTileToKey(QUADTREE_SIZE * 0.5, 0, QUADTREE_SIZE * 0.5),
+    convertTileToKey(QUADTREE_SIZE * 0.5, QUADTREE_SIZE * 0.5, QUADTREE_SIZE * 0.5),
+];
+
+function loadTexture(url: string): Promise<THREE.Texture> {
+    return new Promise((resolve, reject) => {
+        new THREE.TextureLoader().load(url, resolve, () => undefined, reject);
+    });
+}
 
 class Tile {
+    /*
+        `https://tile.openstreetmap.org/${key}.png`,
+        http://h0.ortho.tiles.virtualearth.net/tiles/tre12023013031.jpeg?g=131
+        'http://h2.ortho.tiles.virtualearth.net/tiles/tre12023013.jpeg?g=131',
+        `http://h2.ortho.tiles.virtualearth.net/tiles/a1202033${this.toBingMapKey(key)}.jpeg?g=139`,
+            BING format: tiles/{h,a,tre}
+                        h: aerial with streets
+                        a: only aerial
+                        tre: relief + height?
+                        r: only streets
+        `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${key}.png`,
+        `http://h2.ortho.tiles.virtualearth.net/tiles/a120230${this.toBingMapKey(key)}.jpeg?g=139`,
+        `http://h2.ortho.tiles.virtualearth.net/tiles/a${this.toBingMapKey(key)}.jpeg?g=139`,
+    */
     public key = '';
-    public downloaded = false;
+    public onGPU = false;
     public texture: THREE.Texture = null;
 
-    constructor(public x: number, public y: number) {}
+    constructor(public x: number, public y: number, private tileStyle: TileStyle) {}
 
-    public download(key: string, onFinishedLoading: () => void, onError: () => void) {
+    public async download(key: string, onFinishedLoading: () => void, onError: () => void) {
         this.key = key;
         if (this.texture !== null) {
             throw new Error('Texture was not disposed correctly');
         }
-        new THREE.TextureLoader().load(
-            //`https://tile.openstreetmap.org/${key}.png`,
-            // http://h0.ortho.tiles.virtualearth.net/tiles/tre12023013031.jpeg?g=131
-            //'http://h2.ortho.tiles.virtualearth.net/tiles/tre12023013.jpeg?g=131',
-            //`http://h2.ortho.tiles.virtualearth.net/tiles/a1202033${this.toBingMapKey(key)}.jpeg?g=139`,
-            // BING format: tiles/{h,a,tre}
-            //              h: aerial with streets
-            //              a: only aerial
-            //              tre: relief + height?
-            `http://h2.ortho.tiles.virtualearth.net/tiles/h120230${this.toBingMapKey(key)}.jpeg?g=139`,
-            async (texture) => {
-                this.texture = texture;
-                onFinishedLoading();
-            },
-            onError
-        );
+        try {
+            this.texture = await loadTexture(this.getURL());
+        } catch {
+            onError();
+            return;
+        }
+        onFinishedLoading();
+    }
+
+    private getURL(): string {
+        switch (this.tileStyle) {
+            case TileStyle.AWS_HEIGHT:
+                return `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${this.key}.png`;
+            case TileStyle.BING_AERIAL_RGB:
+                return `http://h2.ortho.tiles.virtualearth.net/tiles/h${this.toBingMapKey(this.key)}.jpeg?g=139`;
+        }
     }
 
     private toBingMapKey(key: string): string {
@@ -44,22 +70,21 @@ class Tile {
             y = Math.floor(y / 2);
             z -= 1;
         }
-        //console.log(res.reverse().join(''));
         return res.reverse().join('');
     }
 
     public clear() {
         this.key = '';
-        this.downloaded = false;
+        this.onGPU = false;
         if (this.texture) this.texture.dispose();
         this.texture = null;
     }
 }
 
-export class TileCache {
+class TileCacheTexture {
     private camera = new THREE.OrthographicCamera(0, TILECACHE_PIXEL_WIDTH, TILECACHE_PIXEL_WIDTH, 0);
     private renderTarget = new THREE.WebGLRenderTarget(TILECACHE_PIXEL_WIDTH, TILECACHE_PIXEL_WIDTH, {
-        //minFilter: THREE.NearestFilter,
+        minFilter: THREE.NearestFilter,
         magFilter: THREE.LinearFilter,
     });
     private scene = new THREE.Scene();
@@ -67,43 +92,14 @@ export class TileCache {
         new THREE.PlaneGeometry(TILE_WIDTH, TILE_WIDTH),
         new THREE.MeshBasicMaterial({ map: null })
     );
-    private cachedTiles = new LRUCache<string, Tile>({ maxSize: TILECACHE_WIDTH ** 2 });
-    private downloadedTiles: Tile[] = [];
-
-    constructor(private renderer: THREE.WebGLRenderer, private priorityDownloader = new TilePriorityDownloader()) {
-        for (let x = 0; x < TILECACHE_WIDTH; x++) {
-            for (let y = 0; y < TILECACHE_WIDTH; y++) {
-                this.cachedTiles.set(`${x}|${y}`, new Tile(x, y));
-            }
-        }
+    constructor(private renderer: THREE.WebGLRenderer) {
         this.renderTarget.scissorTest = true;
         this.mesh.position.set(TILE_WIDTH * 0.5, TILE_WIDTH * 0.5, -1);
         this.scene.add(this.mesh);
-        this.downloadTile(WORLD_KEY);
     }
 
     public get texture(): THREE.Texture {
         return this.renderTarget.texture;
-    }
-
-    public update(visibleTiles: THREE.Vector3[]) {
-        const tilesToDownload = this.priorityDownloader.getTilesToDownload(visibleTiles);
-        for (const tile of tilesToDownload) {
-            if (this.cachedTiles.has(tile)) continue;
-            this.downloadTile(tile);
-            break;
-        }
-        while (this.downloadedTiles.length > 0) {
-            const tile = this.downloadedTiles.pop();
-            this.renderIntoCache(tile);
-            //break; // render one tile per frame
-        }
-        this.keepWorldInCache();
-    }
-
-    public keepWorldInCache() {
-        const tile = this.cachedTiles.get(WORLD_KEY);
-        if (tile) this.cachedTiles.set(WORLD_KEY, tile);
     }
 
     public renderIntoCache(tile: Tile) {
@@ -121,15 +117,64 @@ export class TileCache {
 
         this.renderer.setRenderTarget(null);
         this.renderer.setViewport(oldViewport);
+    }
+}
 
-        tile.clear();
-        tile.downloaded = true;
+export enum TileStyle {
+    BING_AERIAL_RGB,
+    AWS_HEIGHT,
+}
+
+export class TileCache {
+    private cachedTiles = new LRUCache<string, Tile>({ maxSize: TILECACHE_WIDTH ** 2 });
+    private downloadedTiles: Tile[] = [];
+    private tileCache: TileCacheTexture;
+
+    constructor(
+        renderer: THREE.WebGLRenderer,
+        private tileStyle: TileStyle,
+        private priorityDownloader = new TilePriorityDownloader()
+    ) {
+        this.tileCache = new TileCacheTexture(renderer);
+        for (let x = 0; x < TILECACHE_WIDTH; x++) {
+            for (let y = 0; y < TILECACHE_WIDTH; y++) {
+                this.cachedTiles.set(`${x}|${y}`, new Tile(x, y, tileStyle));
+            }
+        }
+        ALWAYS_IN_CACHE.forEach((key) => this.downloadTile(key));
+    }
+
+    public get texture(): THREE.Texture {
+        return this.tileCache.texture;
+    }
+
+    public update(visibleTiles: THREE.Vector3[]) {
+        const tilesToDownload = this.priorityDownloader.getTilesToDownload(visibleTiles);
+        for (const tile of tilesToDownload) {
+            if (this.cachedTiles.has(tile)) continue;
+            this.downloadTile(tile);
+            break;
+        }
+        while (this.downloadedTiles.length > 0) {
+            const tile = this.downloadedTiles.pop();
+            this.tileCache.renderIntoCache(tile);
+            tile.clear();
+            tile.onGPU = true;
+        }
+        this.keepWorldInCache();
+    }
+
+    public keepWorldInCache() {
+        ALWAYS_IN_CACHE.forEach((key) => {
+            const tile = this.cachedTiles.get(key);
+            if (tile) this.cachedTiles.set(key, tile);
+        });
     }
 
     public getEncodedTileColor(x: number, y: number, size: number): number {
         const key = convertTileToKey(x, y, size);
         const tile = this.cachedTiles.get(key);
-        if (!tile || !tile.downloaded) {
+        if (!tile || !tile.onGPU) {
             if (size == QUADTREE_SIZE) return Math.log2(QUADTREE_SIZE);
             const nextSize = size * 2;
             return this.getEncodedTileColor(
@@ -156,6 +201,7 @@ export class TileCache {
                 this.downloadedTiles.push(tile);
             },
             () => {
+                console.log('error downloading', tile);
                 tile.clear();
             }
         );
@@ -171,7 +217,8 @@ class TilePriorityDownloader {
 function convertTileToKey(x: number, y: number, z: number): string {
     const zoom = Math.log2(QUADTREE_SIZE) - Math.log2(z);
     const maxY = 2 ** zoom - 1;
-    return `${zoom}/${x / z}/${maxY - y / z}`;
+    //return `${zoom}/${x / z}/${maxY - y / z}`;
+    return `${zoom + 6}/${34 * 2 ** zoom + x / z}/${maxY - (y / z - 22 * 2 ** zoom)}`; // TODO: remove IBK
 }
 
 /* TODO: TilePriorityDownloader
