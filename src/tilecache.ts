@@ -3,15 +3,16 @@ import { LRUCache } from 'typescript-lru-cache';
 import { QUADTREE_SIZE, TILE_WIDTH, TILECACHE_PIXEL_WIDTH, TILECACHE_WIDTH } from './constants';
 
 const ALWAYS_IN_CACHE = [
+    convertTileToKey(0, 0, QUADTREE_SIZE),
     convertTileToKey(0, 0, QUADTREE_SIZE * 0.5),
     convertTileToKey(0, QUADTREE_SIZE * 0.5, QUADTREE_SIZE * 0.5),
     convertTileToKey(QUADTREE_SIZE * 0.5, 0, QUADTREE_SIZE * 0.5),
     convertTileToKey(QUADTREE_SIZE * 0.5, QUADTREE_SIZE * 0.5, QUADTREE_SIZE * 0.5),
 ];
 
-function loadTexture(url: string, onError: () => void): Promise<THREE.Texture> {
-    return new Promise((resolve) => {
-        new THREE.TextureLoader().load(url, resolve, onError);
+function loadTexture(url: string): Promise<THREE.Texture> {
+    return new Promise((resolve, reject) => {
+        new THREE.TextureLoader().load(url, resolve, () => undefined, reject);
     });
 }
 
@@ -31,26 +32,32 @@ class Tile {
         `http://h2.ortho.tiles.virtualearth.net/tiles/a${this.toBingMapKey(key)}.jpeg?g=139`,
     */
     public key = '';
-    public downloaded = false;
-    public colorTexture: THREE.Texture = null;
-    public heightTexture: THREE.Texture = null;
+    public onGPU = false;
+    public texture: THREE.Texture = null;
 
-    constructor(public x: number, public y: number) {}
+    constructor(public x: number, public y: number, private tileStyle: TileStyle) {}
 
     public async download(key: string, onFinishedLoading: () => void, onError: () => void) {
         this.key = key;
-        if (this.colorTexture !== null || this.heightTexture !== null) {
+        if (this.texture !== null) {
             throw new Error('Texture was not disposed correctly');
         }
-        const heightUrl = `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${key}.png`;
-        const colorUrl = `http://h2.ortho.tiles.virtualearth.net/tiles/a${this.toBingMapKey(key)}.jpeg?g=139`;
-        const [heightTexture, colorTexture] = await Promise.all([
-            loadTexture(heightUrl, onError),
-            loadTexture(colorUrl, onError),
-        ]);
-        this.heightTexture = heightTexture;
-        this.colorTexture = colorTexture;
+        try {
+            this.texture = await loadTexture(this.getURL());
+        } catch {
+            onError();
+            return;
+        }
         onFinishedLoading();
+    }
+
+    private getURL(): string {
+        switch (this.tileStyle) {
+            case TileStyle.AWS_HEIGHT:
+                return `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${this.key}.png`;
+            case TileStyle.BING_AERIAL_RGB:
+                return `http://h2.ortho.tiles.virtualearth.net/tiles/h${this.toBingMapKey(this.key)}.jpeg?g=139`;
+        }
     }
 
     private toBingMapKey(key: string): string {
@@ -68,11 +75,9 @@ class Tile {
 
     public clear() {
         this.key = '';
-        this.downloaded = false;
-        if (this.heightTexture) this.heightTexture.dispose();
-        if (this.colorTexture) this.colorTexture.dispose();
-        this.heightTexture = null;
-        this.colorTexture = null;
+        this.onGPU = false;
+        if (this.texture) this.texture.dispose();
+        this.texture = null;
     }
 }
 
@@ -97,9 +102,9 @@ class TileCacheTexture {
         return this.renderTarget.texture;
     }
 
-    public renderIntoCache(tile: Tile, useColor: boolean) {
+    public renderIntoCache(tile: Tile) {
         console.log('render tile into cache', tile);
-        this.mesh.material.map = useColor ? tile.colorTexture : tile.heightTexture;
+        this.mesh.material.map = tile.texture;
         const left = tile.x * TILE_WIDTH;
         const bottom = tile.y * TILE_WIDTH;
         const oldViewport = this.renderer.getCurrentViewport(new THREE.Vector4());
@@ -115,29 +120,32 @@ class TileCacheTexture {
     }
 }
 
+export enum TileStyle {
+    BING_AERIAL_RGB,
+    AWS_HEIGHT,
+}
+
 export class TileCache {
     private cachedTiles = new LRUCache<string, Tile>({ maxSize: TILECACHE_WIDTH ** 2 });
     private downloadedTiles: Tile[] = [];
-    private colorCache: TileCacheTexture;
-    private heightCache: TileCacheTexture;
+    private tileCache: TileCacheTexture;
 
-    constructor(renderer: THREE.WebGLRenderer, private priorityDownloader = new TilePriorityDownloader()) {
-        this.colorCache = new TileCacheTexture(renderer);
-        this.heightCache = new TileCacheTexture(renderer);
+    constructor(
+        renderer: THREE.WebGLRenderer,
+        private tileStyle: TileStyle,
+        private priorityDownloader = new TilePriorityDownloader()
+    ) {
+        this.tileCache = new TileCacheTexture(renderer);
         for (let x = 0; x < TILECACHE_WIDTH; x++) {
             for (let y = 0; y < TILECACHE_WIDTH; y++) {
-                this.cachedTiles.set(`${x}|${y}`, new Tile(x, y));
+                this.cachedTiles.set(`${x}|${y}`, new Tile(x, y, tileStyle));
             }
         }
         ALWAYS_IN_CACHE.forEach((key) => this.downloadTile(key));
     }
 
-    public get colorTexture(): THREE.Texture {
-        return this.colorCache.texture;
-    }
-
-    public get heightTexture(): THREE.Texture {
-        return this.heightCache.texture;
+    public get texture(): THREE.Texture {
+        return this.tileCache.texture;
     }
 
     public update(visibleTiles: THREE.Vector3[]) {
@@ -149,10 +157,9 @@ export class TileCache {
         }
         while (this.downloadedTiles.length > 0) {
             const tile = this.downloadedTiles.pop();
-            this.colorCache.renderIntoCache(tile, true);
-            this.heightCache.renderIntoCache(tile, false);
+            this.tileCache.renderIntoCache(tile);
             tile.clear();
-            tile.downloaded = true;
+            tile.onGPU = true;
         }
         this.keepWorldInCache();
     }
@@ -167,7 +174,7 @@ export class TileCache {
     public getEncodedTileColor(x: number, y: number, size: number): number {
         const key = convertTileToKey(x, y, size);
         const tile = this.cachedTiles.get(key);
-        if (!tile || !tile.downloaded) {
+        if (!tile || !tile.onGPU) {
             if (size == QUADTREE_SIZE) return Math.log2(QUADTREE_SIZE);
             const nextSize = size * 2;
             return this.getEncodedTileColor(
@@ -194,6 +201,7 @@ export class TileCache {
                 this.downloadedTiles.push(tile);
             },
             () => {
+                console.log('error downloading', tile);
                 tile.clear();
             }
         );
@@ -209,7 +217,8 @@ class TilePriorityDownloader {
 function convertTileToKey(x: number, y: number, z: number): string {
     const zoom = Math.log2(QUADTREE_SIZE) - Math.log2(z);
     const maxY = 2 ** zoom - 1;
-    return `${zoom}/${x / z}/${maxY - y / z}`;
+    //return `${zoom}/${x / z}/${maxY - y / z}`;
+    return `${zoom + 6}/${34 * 2 ** zoom + x / z}/${maxY - (y / z - 22 * 2 ** zoom)}`; // TODO: remove IBK
 }
 
 /* TODO: TilePriorityDownloader

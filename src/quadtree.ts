@@ -3,7 +3,7 @@ import { TileCache } from './tilecache';
 import { QUADTREE_SIZE, WORLD_SIZE } from './constants';
 
 class VectorCache {
-    private tmpVectors = Array.from({ length: 10000 }, () => new THREE.Vector3());
+    private tmpVectors = Array.from({ length: 80000 }, () => new THREE.Vector3());
     private i = 0;
 
     public get(x: number, y: number, z: number): THREE.Vector3 {
@@ -36,7 +36,7 @@ export class Quadtree {
     private _render: () => void;
     private meshes: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>[] = [];
     public texture: THREE.Texture;
-    constructor(private renderer: THREE.WebGLRenderer, private tileCache: TileCache) {
+    constructor(private renderer: THREE.WebGLRenderer, public tileCache: TileCache) {
         const camera = new THREE.OrthographicCamera(0, QUADTREE_SIZE, QUADTREE_SIZE, 0);
         const bufferScene = new THREE.Scene();
         for (let i = 0; i < 300; i++) {
@@ -60,6 +60,7 @@ export class Quadtree {
     }
 
     public update(visibleTiles: THREE.Vector3[]) {
+        this.tileCache.update(visibleTiles);
         let i = 0;
         for (const quadTile of visibleTiles) {
             if (i >= this.meshes.length) break;
@@ -75,13 +76,13 @@ export class Quadtree {
         }
         this._render();
     }
+}
 
-    public globalToLocal(pos: THREE.Vector3): THREE.Vector3 {
-        return pos
-            .clone()
-            .multiplyScalar(QUADTREE_SIZE / WORLD_SIZE)
-            .add(new THREE.Vector3(QUADTREE_SIZE * 0.5, QUADTREE_SIZE * 0.5, 0));
-    }
+export function globalToLocal(pos: THREE.Vector3): THREE.Vector3 {
+    return pos
+        .clone()
+        .multiplyScalar(QUADTREE_SIZE / WORLD_SIZE)
+        .add(new THREE.Vector3(QUADTREE_SIZE * 0.5, QUADTREE_SIZE * 0.5, 0));
 }
 
 export function getTiles(camPos: THREE.Vector3): THREE.Vector3[] {
@@ -95,7 +96,7 @@ export function getTiles(camPos: THREE.Vector3): THREE.Vector3[] {
             res.push(new THREE.Vector3(x, y, size));
             continue;
         }
-        if (vectorCache.planeDistanceTo(camPos, x, y, size) > size * 0.7 && size != QUADTREE_SIZE) {
+        if (vectorCache.planeDistanceTo(camPos, x, y, size) > size * 0.7) {
             res.push(new THREE.Vector3(x, y, size));
             continue;
         }
@@ -104,5 +105,9 @@ export function getTiles(camPos: THREE.Vector3): THREE.Vector3[] {
         stack.push(vectorCache.get(x, y + size / 2, size / 2));
         stack.push(vectorCache.get(x + size / 2, y + size / 2, size / 2));
     }
+    res.sort(
+        (a, b) =>
+            vectorCache.planeDistanceTo(camPos, a.x, a.y, a.z) - vectorCache.planeDistanceTo(camPos, b.x, b.y, b.z)
+    );
     return res; // TODO: sort tiles by distance from camera
 }
