@@ -17,6 +17,12 @@ function loadTexture(url: string): Promise<THREE.Texture> {
     });
 }
 
+export enum TileStyle {
+    BING_AERIAL_RGB,
+    AWS_HEIGHT,
+    GOOGLE_AERIAL_RGB,
+}
+
 class Tile {
     /*
         `https://tile.openstreetmap.org/${key}.png`,
@@ -58,7 +64,14 @@ class Tile {
                 return `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${this.key}.png`;
             case TileStyle.BING_AERIAL_RGB:
                 return `http://h2.ortho.tiles.virtualearth.net/tiles/a${this.toBingMapKey(this.key)}.jpeg?g=139`;
+            case TileStyle.GOOGLE_AERIAL_RGB:
+                return `http://mts0.google.com/vt/lyrs=s&${this.toGoogleKey(this.key)}`;
         }
+    }
+
+    private toGoogleKey(key: string): string {
+        const [z, x, y] = key.split('/');
+        return `x=${x}&y=${y}&z=${z}`;
     }
 
     private toBingMapKey(key: string): string {
@@ -142,11 +155,6 @@ class CPUTileCacheTexture {
         const height = pixel[0] * 256.0 + pixel[1] + pixel[2] / 256.0 - 32768.0;
         return height;
     }
-}
-
-export enum TileStyle {
-    BING_AERIAL_RGB,
-    AWS_HEIGHT,
 }
 
 export class TileCache {

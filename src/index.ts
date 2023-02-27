@@ -14,7 +14,7 @@ const stats = new Stats();
 stats.showPanel(0);
 document.body.appendChild(stats.dom);
 
-const colorQuadtree = new Quadtree(renderer, new TileCache(renderer, TileStyle.BING_AERIAL_RGB));
+const colorQuadtree = new Quadtree(renderer, new TileCache(renderer, TileStyle.GOOGLE_AERIAL_RGB));
 const heightQuadtree = new Quadtree(renderer, new TileCache(renderer, TileStyle.AWS_HEIGHT));
 const clipMapScene = new ClipMapScene(renderer, colorQuadtree, heightQuadtree);
 const guiScene = new GuiScene(renderer, colorQuadtree, heightQuadtree);
@@ -29,7 +29,7 @@ function animate() {
     requestAnimationFrame(animate);
     stats.begin();
 
-    clipMapScene.controls.target.z = getHeight(clipMapScene.controls.target);
+    clipMapScene.controls.target.z = getHeight(clipMapScene.controls.target) + 3.0;
     clipMapScene.update();
     clipMapScene.camera.position.z = Math.max(
         clipMapScene.camera.position.z,
@@ -52,7 +52,7 @@ function animate() {
     }
     */
     const scaledCameraPos = globalToLocal(clipMapScene.camera.position);
-    scaledCameraPos.z = clipMapScene.camera.position.z - getHeight(clipMapScene.controls.target) - 3.0;
+    scaledCameraPos.z = clipMapScene.camera.position.z - getHeight(clipMapScene.controls.target) - 5.0;
     const visibleTiles = getTiles(scaledCameraPos);
     colorQuadtree.update(visibleTiles);
     heightQuadtree.update(visibleTiles);
