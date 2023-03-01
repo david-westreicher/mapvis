@@ -64,6 +64,8 @@ export class Quadtree {
         let i = 0;
         for (const quadTile of visibleTiles) {
             if (i >= this.meshes.length) break;
+            //TODO: offset the tiles such that the camera is centered, and inversely logarithmically scaled
+            //      could do this in the vertex shader
             const mesh = this.meshes[i++];
             mesh.position.set(quadTile.x + quadTile.z / 2, quadTile.y + quadTile.z / 2, -1);
             mesh.scale.set(quadTile.z, quadTile.z, 1);
