@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { Quadtree, getTiles, globalToLocal } from './quadtree';
+import { Quadtree, globalToLocal, getVisibleTiles } from './quadtree';
 import { TileCache, TileStyle } from './tilecache';
 import { ClipMapScene, GuiScene } from './scenes';
 import Stats from 'stats.js';
@@ -29,7 +29,7 @@ function animate() {
     stats.begin();
 
     const scaledCameraPos = clipMapScene.updateSceneAndGetScaledCamera(getHeight);
-    const visibleTiles = getTiles(scaledCameraPos);
+    const visibleTiles = getVisibleTiles(scaledCameraPos);
     colorQuadtree.update(visibleTiles);
     heightQuadtree.update(visibleTiles);
 
