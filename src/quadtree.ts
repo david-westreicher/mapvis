@@ -85,19 +85,30 @@ export function globalToLocal(pos: THREE.Vector3): THREE.Vector3 {
         .add(new THREE.Vector3(QUADTREE_SIZE * 0.5, QUADTREE_SIZE * 0.5, 0));
 }
 
-export function getTiles(camPos: THREE.Vector3): THREE.Vector3[] {
-    const res = [];
+export function getVisibleTiles(camPos: THREE.Vector3): THREE.Vector3[] {
+    const res: THREE.Vector3[] = [];
+    getTilesVisitor((x, y, size) => {
+        if (size == 1 || vectorCache.planeDistanceTo(camPos, x, y, size) > size * 0.7) {
+            res.push(new THREE.Vector3(x, y, size));
+            return false;
+        }
+        return true;
+    });
+    res.sort(
+        (a, b) =>
+            vectorCache.planeDistanceTo(camPos, a.x, a.y, a.z) - vectorCache.planeDistanceTo(camPos, b.x, b.y, b.z)
+    );
+    return res;
+}
+
+export function getTilesVisitor(visitor: (x: number, y: number, size: number) => boolean) {
     vectorCache.reset();
     const stack = [vectorCache.get(0, 0, QUADTREE_SIZE)];
     while (stack.length) {
         const { x, y, z } = stack.pop();
+        const shouldContinue = visitor(x, y, z);
         const size = z;
-        if (size == 1) {
-            res.push(new THREE.Vector3(x, y, size));
-            continue;
-        }
-        if (vectorCache.planeDistanceTo(camPos, x, y, size) > size * 0.7) {
-            res.push(new THREE.Vector3(x, y, size));
+        if (!shouldContinue || size == 1) {
             continue;
         }
         stack.push(vectorCache.get(x, y, size / 2));
@@ -105,9 +116,4 @@ export function getTiles(camPos: THREE.Vector3): THREE.Vector3[] {
         stack.push(vectorCache.get(x, y + size / 2, size / 2));
         stack.push(vectorCache.get(x + size / 2, y + size / 2, size / 2));
     }
-    res.sort(
-        (a, b) =>
-            vectorCache.planeDistanceTo(camPos, a.x, a.y, a.z) - vectorCache.planeDistanceTo(camPos, b.x, b.y, b.z)
-    );
-    return res; // TODO: sort tiles by distance from camera
 }
