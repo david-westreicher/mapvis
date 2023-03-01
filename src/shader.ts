@@ -1,4 +1,5 @@
 const VIRTUAL_TEXTURE_FUNCTIONALITY = `
+    uniform float HEIGHT_SCALE;
     uniform float QUADTREE_WIDTH;
     uniform float TILECACHE_WIDTH;
     uniform float TILECACHE_PIXEL_WIDTH;
@@ -15,7 +16,7 @@ const VIRTUAL_TEXTURE_FUNCTIONALITY = `
 
     float elevation(sampler2D height, vec2 uv) {
         vec3 heightTex = texture2D(height, uv).rgb;
-        return ((heightTex.r*256.0 * 256.0 + heightTex.g * 256.0 + heightTex.b)  - 32768.0) / 50.0;
+        return ((heightTex.r * 256.0 * 255.0 + heightTex.g * 256.0 + heightTex.b)  - 32768.0) * HEIGHT_SCALE;
     }
 
 `;

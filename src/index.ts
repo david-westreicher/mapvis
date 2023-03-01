@@ -3,6 +3,7 @@ import { Quadtree, getTiles, globalToLocal } from './quadtree';
 import { TileCache, TileStyle } from './tilecache';
 import { ClipMapScene, GuiScene } from './scenes';
 import Stats from 'stats.js';
+import { CAMERA_HEIGHT_OFFSET } from './constants';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -19,40 +20,24 @@ const heightQuadtree = new Quadtree(renderer, new TileCache(renderer, TileStyle.
 const clipMapScene = new ClipMapScene(renderer, colorQuadtree, heightQuadtree);
 const guiScene = new GuiScene(renderer, colorQuadtree, heightQuadtree);
 
-function getHeight(pos: THREE.Vector3) {
+function getHeight(pos: THREE.Vector3): number {
     const scaledPos = globalToLocal(pos);
-    const height = heightQuadtree.tileCache.getHeight(scaledPos.x, scaledPos.y) / 50;
-    return height;
+    return heightQuadtree.tileCache.getHeight(scaledPos.x, scaledPos.y);
 }
 
 function animate() {
     requestAnimationFrame(animate);
     stats.begin();
 
-    clipMapScene.controls.target.z = getHeight(clipMapScene.controls.target) + 3.0;
+    clipMapScene.controls.target.z = getHeight(clipMapScene.controls.target) + CAMERA_HEIGHT_OFFSET;
     clipMapScene.update();
     clipMapScene.camera.position.z = Math.max(
         clipMapScene.camera.position.z,
-        getHeight(clipMapScene.camera.position) + 3.0
+        getHeight(clipMapScene.camera.position) + CAMERA_HEIGHT_OFFSET
     );
-    /*
-    clipMapScene.meshes.forEach((m) => m.scale.setScalar(clipMapScene.camera.position.z / 50));
-    const scale = clipMapScene.camera.position.z / 50;
-    for (let i = 0; i < 10; i++) {
-        for (let j = 0; j < 10; j++) {
-            const mesh = clipMapScene.meshes[i * 10 + j];
-            mesh.scale.setScalar(scale);
-            mesh.position.x = clipMapScene.controls.target.x + i * scale * 2;
-            mesh.position.y = clipMapScene.controls.target.y + j * scale * 2;
-            mesh.scale.z = scale * 10;
-            const scaledPos = globalToLocal(mesh.position);
-            const height = heightQuadtree.tileCache.getHeight(scaledPos.x, scaledPos.y) / 50 + scale;
-            mesh.position.z = height;
-        }
-    }
-    */
     const scaledCameraPos = globalToLocal(clipMapScene.camera.position);
-    scaledCameraPos.z = clipMapScene.camera.position.z - getHeight(clipMapScene.controls.target) - 5.0;
+    scaledCameraPos.z = Math.max(0, clipMapScene.camera.position.z - getHeight(clipMapScene.camera.position) - 5.0);
+
     const visibleTiles = getTiles(scaledCameraPos);
     colorQuadtree.update(visibleTiles);
     heightQuadtree.update(visibleTiles);
@@ -63,3 +48,10 @@ function animate() {
     stats.end();
 }
 animate();
+
+document.onkeydown = function (e) {
+    if (e.code === 'Space') {
+        colorQuadtree.tileCache.clear();
+        heightQuadtree.tileCache.clear();
+    }
+};

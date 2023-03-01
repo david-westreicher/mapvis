@@ -8,7 +8,7 @@ import {
     QUADTREE_VERTEX_SHADER,
 } from './shader';
 import * as CLIPMAP from './clipmap';
-import { QUADTREE_SIZE, TILECACHE_WIDTH, TILECACHE_PIXEL_WIDTH, WORLD_SIZE } from './constants';
+import { QUADTREE_SIZE, TILECACHE_WIDTH, TILECACHE_PIXEL_WIDTH, WORLD_SIZE, HEIGHT_SCALE } from './constants';
 import { Quadtree } from './quadtree';
 
 export class ThreeDScene {
@@ -43,7 +43,6 @@ export class ThreeDScene {
 }
 
 export class ClipMapScene extends ThreeDScene {
-    public meshes: THREE.Mesh[] = [];
     constructor(protected renderer: THREE.WebGLRenderer, colorQuadtree: Quadtree, heightQuadtree: Quadtree) {
         super(renderer);
         const shaderUniforms: { [uniform: string]: THREE.IUniform } = {
@@ -62,6 +61,9 @@ export class ClipMapScene extends ThreeDScene {
             heightTextureCache: {
                 value: heightQuadtree.tileCache.texture,
             },
+            HEIGHT_SCALE: {
+                value: HEIGHT_SCALE,
+            },
             QUADTREE_WIDTH: {
                 value: QUADTREE_SIZE,
             },
@@ -77,19 +79,6 @@ export class ClipMapScene extends ThreeDScene {
         };
         const clipMapMesh = this.constructMesh(shaderUniforms);
         this.scene.add(clipMapMesh);
-        for (let i = 0; i < 100; i++) {
-            const mesh = new THREE.Mesh(
-                new THREE.BoxGeometry(1, 1, 1),
-                new THREE.MeshBasicMaterial({ color: 0x000000 })
-            );
-            mesh.position.z = 100;
-            this.meshes.push(mesh);
-            this.scene.add(mesh);
-        }
-    }
-
-    public update(): void {
-        super.update();
     }
 
     private constructMesh(uniforms: {
@@ -103,8 +92,41 @@ export class ClipMapScene extends ThreeDScene {
             wireframe: false,
         });
         const geometry = CLIPMAP.buildGeometry();
-        const mesh = new THREE.Mesh(geometry, clipMapMaterial);
-        return mesh;
+        return new THREE.Mesh(geometry, clipMapMaterial);
+    }
+}
+
+export class HeightDebugScene extends ThreeDScene {
+    public meshes: THREE.Mesh[] = [];
+    constructor(protected renderer: THREE.WebGLRenderer, private clipMapScene: ClipMapScene) {
+        super(renderer);
+        for (let i = 0; i < 100; i++) {
+            const mesh = new THREE.Mesh(
+                new THREE.BoxGeometry(1, 1, 1),
+                new THREE.MeshBasicMaterial({ color: 0x000000 })
+            );
+            mesh.position.z = 100;
+            this.meshes.push(mesh);
+            this.scene.add(mesh);
+        }
+    }
+
+    public updateScene(heightGetter: (pos: THREE.Vector3) => number): void {
+        super.update();
+        const scale = Math.max(this.clipMapScene.camera.position.z / 50.0, 2.0);
+        for (let i = 0; i < 10; i++) {
+            for (let j = 0; j < 10; j++) {
+                const mesh = this.meshes[i * 10 + j];
+                mesh.scale.setScalar(scale);
+                mesh.position.x = this.clipMapScene.controls.target.x + i * scale * 2;
+                mesh.position.y = this.clipMapScene.controls.target.y + j * scale * 2;
+                const height = heightGetter(mesh.position) + scale * 0.5;
+                mesh.position.z = height;
+            }
+        }
+    }
+    public render(): void {
+        this.renderer.render(this.scene, this.clipMapScene.camera);
     }
 }
 
@@ -197,6 +219,9 @@ export class QuadTreeScene extends ThreeDScene {
                     },
                     heightTextureCache: {
                         value: heightTexture,
+                    },
+                    HEIGHT_SCALE: {
+                        value: HEIGHT_SCALE,
                     },
                     QUADTREE_WIDTH: {
                         value: QUADTREE_SIZE,

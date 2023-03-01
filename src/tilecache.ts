@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { LRUCache } from 'typescript-lru-cache';
-import { QUADTREE_SIZE, TILE_WIDTH, TILECACHE_PIXEL_WIDTH, TILECACHE_WIDTH } from './constants';
+import { QUADTREE_SIZE, TILE_WIDTH, TILECACHE_PIXEL_WIDTH, TILECACHE_WIDTH, HEIGHT_SCALE } from './constants';
 import { getTilesVisitor } from './quadtree';
 
 const ALWAYS_IN_CACHE = [
@@ -150,9 +150,10 @@ class CPUTileCacheTexture {
     }
 
     public getHeight(tile: Tile, x: number, y: number) {
+        //TODO: could use linear subsampling
         const imageData = this.ctx.getImageData(tile.x * TILE_WIDTH + x, tile.y * TILE_WIDTH + TILE_WIDTH - y, 1, 1);
         const pixel = imageData.data;
-        const height = pixel[0] * 256.0 + pixel[1] + pixel[2] / 256.0 - 32768.0;
+        const height = (pixel[0] * 256.0 + pixel[1] + pixel[2] / 256.0 - 32768.0) * HEIGHT_SCALE;
         return height;
     }
 }
@@ -175,7 +176,6 @@ export class TileCache {
                 this.cachedTiles.set(`${x}|${y}`, new Tile(x, y, tileStyle));
             }
         }
-        ALWAYS_IN_CACHE.forEach((key) => this.downloadTile(key));
     }
 
     public get texture(): THREE.Texture {
@@ -203,6 +203,7 @@ export class TileCache {
         ALWAYS_IN_CACHE.forEach((key) => {
             const tile = this.cachedTiles.get(key);
             if (tile) this.cachedTiles.set(key, tile);
+            else this.downloadTile(key);
         });
     }
 
@@ -233,7 +234,7 @@ export class TileCache {
         tile.download(
             key,
             () => {
-                this.downloadedTiles.push(tile);
+                if (key === tile.key) this.downloadedTiles.push(tile);
             },
             () => {
                 console.log('error downloading', tile);
@@ -247,17 +248,25 @@ export class TileCache {
         getTilesVisitor((x: number, y: number, size: number) => {
             const key = convertTileToKey(x, y, size);
             const tile = this.cachedTiles.get(key);
-            if (!tile) return false;
             const inTile = x <= posX && posX <= x + size && y <= posY && posY <= y + size;
-            const isGoodTile = tile.onGPU && inTile;
+            const isGoodTile = tile && tile.onGPU && inTile;
             if (isGoodTile) lastTile.set(x, y, size);
-            return isGoodTile;
+            return inTile;
         });
         const tile = this.cachedTiles.get(convertTileToKey(lastTile.x, lastTile.y, lastTile.z));
-        if (!tile) return 1000;
+        if (!tile) return 0;
         const offsetX = ((posX % lastTile.z) * TILE_WIDTH) / lastTile.z;
         const offsetY = ((posY % lastTile.z) * TILE_WIDTH) / lastTile.z;
         return this.cpuCache.getHeight(tile, offsetX, offsetY);
+    }
+
+    public clear() {
+        const tiles: Tile[] = Array.from(this.cachedTiles.values());
+        this.cachedTiles.clear();
+        for (const tile of tiles) {
+            this.cachedTiles.set(this.cachedTiles.size.toString(), tile);
+            tile.clear();
+        }
     }
 }
 
