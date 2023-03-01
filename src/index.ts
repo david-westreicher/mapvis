@@ -3,7 +3,6 @@ import { Quadtree, getTiles, globalToLocal } from './quadtree';
 import { TileCache, TileStyle } from './tilecache';
 import { ClipMapScene, GuiScene } from './scenes';
 import Stats from 'stats.js';
-import { CAMERA_HEIGHT_OFFSET } from './constants';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -29,15 +28,7 @@ function animate() {
     requestAnimationFrame(animate);
     stats.begin();
 
-    clipMapScene.controls.target.z = getHeight(clipMapScene.controls.target) + CAMERA_HEIGHT_OFFSET;
-    clipMapScene.update();
-    clipMapScene.camera.position.z = Math.max(
-        clipMapScene.camera.position.z,
-        getHeight(clipMapScene.camera.position) + CAMERA_HEIGHT_OFFSET
-    );
-    const scaledCameraPos = globalToLocal(clipMapScene.camera.position);
-    scaledCameraPos.z = Math.max(0, clipMapScene.camera.position.z - getHeight(clipMapScene.camera.position) - 5.0);
-
+    const scaledCameraPos = clipMapScene.updateSceneAndGetScaledCamera(getHeight);
     const visibleTiles = getTiles(scaledCameraPos);
     colorQuadtree.update(visibleTiles);
     heightQuadtree.update(visibleTiles);

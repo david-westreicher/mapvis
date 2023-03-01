@@ -8,8 +8,15 @@ import {
     QUADTREE_VERTEX_SHADER,
 } from './shader';
 import * as CLIPMAP from './clipmap';
-import { QUADTREE_SIZE, TILECACHE_WIDTH, TILECACHE_PIXEL_WIDTH, WORLD_SIZE, HEIGHT_SCALE } from './constants';
-import { Quadtree } from './quadtree';
+import {
+    QUADTREE_SIZE,
+    TILECACHE_WIDTH,
+    TILECACHE_PIXEL_WIDTH,
+    WORLD_SIZE,
+    HEIGHT_SCALE,
+    CAMERA_HEIGHT_OFFSET,
+} from './constants';
+import { Quadtree, globalToLocal } from './quadtree';
 
 export class ThreeDScene {
     protected scene: THREE.Scene = new THREE.Scene();
@@ -93,6 +100,16 @@ export class ClipMapScene extends ThreeDScene {
         });
         const geometry = CLIPMAP.buildGeometry();
         return new THREE.Mesh(geometry, clipMapMaterial);
+    }
+
+    public updateSceneAndGetScaledCamera(heightGetter: (pos: THREE.Vector3) => number) {
+        this.controls.target.z = heightGetter(this.controls.target) + CAMERA_HEIGHT_OFFSET;
+        const cameraHeight = heightGetter(this.camera.position);
+        this.controls.update();
+        this.camera.position.z = Math.max(this.camera.position.z, cameraHeight + CAMERA_HEIGHT_OFFSET);
+        const scaledCameraPos = globalToLocal(this.camera.position);
+        scaledCameraPos.z = Math.max(0, this.camera.position.z - cameraHeight - 5.0);
+        return scaledCameraPos;
     }
 }
 
