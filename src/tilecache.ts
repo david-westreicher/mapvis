@@ -139,7 +139,6 @@ class CPUTileCacheTexture {
 
     constructor() {
         const canvas = document.createElement('canvas');
-        //document.body.appendChild(canvas);
         canvas.width = TILECACHE_PIXEL_WIDTH;
         canvas.height = TILECACHE_PIXEL_WIDTH;
         this.ctx = canvas.getContext('2d', { willReadFrequently: true });
