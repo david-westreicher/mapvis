@@ -28,10 +28,11 @@ function animate() {
     requestAnimationFrame(animate);
     stats.begin();
 
-    const scaledCameraPos = clipMapScene.updateSceneAndGetScaledCamera(getHeight);
+    const scaledCameraPos = clipMapScene.updateSceneAndGetScaledCamera(getHeight, colorQuadtree.offset);
+    guiScene.updateScene(colorQuadtree.offset);
     const visibleTiles = getVisibleTiles(scaledCameraPos);
-    colorQuadtree.update(visibleTiles);
-    heightQuadtree.update(visibleTiles);
+    colorQuadtree.update(visibleTiles, scaledCameraPos);
+    heightQuadtree.update(visibleTiles, scaledCameraPos);
 
     guiScene.render();
     clipMapScene.render();

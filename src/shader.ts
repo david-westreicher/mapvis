@@ -3,9 +3,10 @@ const VIRTUAL_TEXTURE_FUNCTIONALITY = `
     uniform float QUADTREE_WIDTH;
     uniform float TILECACHE_WIDTH;
     uniform float TILECACHE_PIXEL_WIDTH;
+    uniform vec3 indirectionMapOffset;
 
     vec2 physicalTextureCoord(sampler2D quadMap, vec2 uvVar) {
-        vec4 indirectionMap = texture2D(quadMap, uvVar);
+        vec4 indirectionMap = texture2D(quadMap, uvVar - indirectionMapOffset.xy / QUADTREE_WIDTH);
         float tileSize = exp2(indirectionMap.b * 255.0);
         vec2 tileCoord = vec2(indirectionMap.r, indirectionMap.g) * 255.0 / TILECACHE_WIDTH;
         vec2 inTileCoord = mod(uvVar * QUADTREE_WIDTH, tileSize);
@@ -85,13 +86,14 @@ export const QUADTREE_FRAGMENT_SHADER = `
 export const QUADTREE_DEBUG_FRAGMENT_SHADER = `
     uniform sampler2D map;
     uniform float QUADTREE_WIDTH;
+    uniform vec3 indirectionMapOffset;
     varying vec2 uvVar;
 
     void main() {
         vec4 indirectionMap = texture2D(map, uvVar);
         float tileSize = exp2(indirectionMap.b * 255.0);
-        vec2 inTileCoord = mod(uvVar * QUADTREE_WIDTH, tileSize) / tileSize;
+        vec2 inTileCoord = mod(uvVar * QUADTREE_WIDTH + indirectionMapOffset.xy, tileSize) / tileSize;
         float tileSizeColor = indirectionMap.b * 256.0 / 10.0;
-        gl_FragColor = vec4(vec2(inTileCoord), tileSizeColor, 1.0);
+        gl_FragColor = vec4(inTileCoord, tileSizeColor, 1.0);
     }
 `;

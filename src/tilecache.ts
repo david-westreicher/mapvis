@@ -278,8 +278,8 @@ class TilePriorityDownloader {
 function convertTileToKey(x: number, y: number, size: number): string {
     const zoom = Math.log2(QUADTREE_SIZE) - Math.log2(size);
     const maxY = 2 ** zoom - 1;
-    //return `${zoom}/${x / z}/${maxY - y / z}`;
-    return `${zoom + 6}/${34 * 2 ** zoom + x / size}/${maxY - (y / size - 22 * 2 ** zoom)}`; // TODO: remove IBK
+    return `${zoom}/${x / size}/${maxY - y / size}`;
+    //return `${zoom + 6}/${34 * 2 ** zoom + x / size}/${maxY - (y / size - 22 * 2 ** zoom)}`; // TODO: remove IBK
 }
 
 /* TODO: TilePriorityDownloader

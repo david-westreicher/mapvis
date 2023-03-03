@@ -36,13 +36,13 @@ export class Quadtree {
     private _render: () => void;
     private meshes: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>[] = [];
     public texture: THREE.Texture;
+    public offset = new THREE.Vector3();
     constructor(private renderer: THREE.WebGLRenderer, public tileCache: TileCache) {
         const camera = new THREE.OrthographicCamera(0, QUADTREE_SIZE, QUADTREE_SIZE, 0);
         const bufferScene = new THREE.Scene();
         for (let i = 0; i < 300; i++) {
             const color = new THREE.Color();
             const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 1.0), new THREE.MeshBasicMaterial({ color }));
-            mesh.position.z = -1;
             this.meshes.push(mesh);
             bufferScene.add(mesh);
         }
@@ -59,15 +59,19 @@ export class Quadtree {
         };
     }
 
-    public update(visibleTiles: THREE.Vector3[]) {
+    public update(visibleTiles: THREE.Vector3[], cameraPos: THREE.Vector3) {
+        this.offset
+            .copy(cameraPos)
+            .add(new THREE.Vector3(-QUADTREE_SIZE * 0.5, -QUADTREE_SIZE * 0.5))
+            .floor();
+        this.offset.z = 0;
+        //this.offset.set(0, 0, 0);
         this.tileCache.update(visibleTiles);
         let i = 0;
         for (const quadTile of visibleTiles) {
             if (i >= this.meshes.length) break;
-            //TODO: offset the tiles such that the camera is centered, and inversely logarithmically scaled
-            //      could do this in the vertex shader
             const mesh = this.meshes[i++];
-            mesh.position.set(quadTile.x + quadTile.z / 2, quadTile.y + quadTile.z / 2, -1);
+            mesh.position.set(quadTile.x + quadTile.z / 2, quadTile.y + quadTile.z / 2, -1).sub(this.offset);
             mesh.scale.set(quadTile.z, quadTile.z, 1);
             const tileColor = this.tileCache.getEncodedTileColor(quadTile.x, quadTile.y, quadTile.z);
             mesh.material.color.setHex(tileColor);
