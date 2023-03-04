@@ -1,4 +1,5 @@
-export const QUADTREE_SIZE = 512 * 2;
+export const QUADTREE_SIZE = 8192 * 2;
+export const INDIRECTION_TEXTURE_SIZE = 8192 * 2;
 export const TILE_WIDTH = 256;
 export const TILECACHE_WIDTH = 20;
 export const TILECACHE_PIXEL_WIDTH = TILE_WIDTH * TILECACHE_WIDTH;

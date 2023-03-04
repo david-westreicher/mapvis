@@ -50,7 +50,7 @@ export class ThreeDScene {
 }
 
 export class ClipMapScene extends ThreeDScene {
-    private shaderUniforms: { [uniform: string]: THREE.IUniform };
+    public shaderUniforms: { [uniform: string]: THREE.IUniform };
     constructor(protected renderer: THREE.WebGLRenderer, colorQuadtree: Quadtree, heightQuadtree: Quadtree) {
         super(renderer);
         this.shaderUniforms = {
@@ -107,7 +107,6 @@ export class ClipMapScene extends ThreeDScene {
     }
 
     public updateSceneAndGetScaledCamera(heightGetter: (pos: THREE.Vector3) => number) {
-        this.shaderUniforms.indirectionMapOffset.value.copy(quadTreeOffset);
         this.controls.target.z = heightGetter(this.controls.target) + CAMERA_HEIGHT_OFFSET;
         const cameraHeight = heightGetter(this.camera.position);
         this.controls.update();
@@ -155,11 +154,15 @@ export class HeightDebugScene extends ThreeDScene {
 export class GuiScene {
     public camera: THREE.Camera = new THREE.OrthographicCamera(0, window.innerWidth, window.innerHeight, 0);
 
-    private indirectionMapOffset = new THREE.Vector3();
     private scene: THREE.Scene = new THREE.Scene();
     private static readonly PLANE_SIZE = 200;
 
-    constructor(private renderer: THREE.WebGLRenderer, colorQuadtree: Quadtree, heightQuadtree: Quadtree) {
+    constructor(
+        private renderer: THREE.WebGLRenderer,
+        colorQuadtree: Quadtree,
+        heightQuadtree: Quadtree,
+        private indirectionMapOffset: THREE.Vector3
+    ) {
         this.scene.add(this.constructFullScreenMesh(this.getDebugShader(colorQuadtree)));
         this.scene.add(
             this.constructFullScreenMesh(new THREE.MeshBasicMaterial({ map: colorQuadtree.tileCache.texture }))
@@ -199,6 +202,7 @@ export class GuiScene {
     }
 
     public render() {
+        console.log(this.indirectionMapOffset);
         this.renderer.render(this.scene, this.camera);
     }
 

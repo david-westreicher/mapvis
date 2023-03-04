@@ -17,7 +17,8 @@ document.body.appendChild(stats.dom);
 const colorQuadtree = new Quadtree(renderer, new TileCache(renderer, TileStyle.GOOGLE_AERIAL_RGB));
 const heightQuadtree = new Quadtree(renderer, new TileCache(renderer, TileStyle.AWS_HEIGHT));
 const clipMapScene = new ClipMapScene(renderer, colorQuadtree, heightQuadtree);
-const guiScene = new GuiScene(renderer, colorQuadtree, heightQuadtree);
+const guiScene = new GuiScene(renderer, colorQuadtree, heightQuadtree, colorQuadtree.offset);
+clipMapScene.shaderUniforms.indirectionMapOffset.value = colorQuadtree.offset;
 
 function getHeight(pos: THREE.Vector3): number {
     const scaledPos = globalToLocal(pos);
@@ -28,8 +29,7 @@ function animate() {
     requestAnimationFrame(animate);
     stats.begin();
 
-    const scaledCameraPos = clipMapScene.updateSceneAndGetScaledCamera(getHeight, colorQuadtree.offset);
-    guiScene.updateScene(colorQuadtree.offset);
+    const scaledCameraPos = clipMapScene.updateSceneAndGetScaledCamera(getHeight);
     const visibleTiles = getVisibleTiles(scaledCameraPos);
     colorQuadtree.update(visibleTiles, scaledCameraPos);
     heightQuadtree.update(visibleTiles, scaledCameraPos);

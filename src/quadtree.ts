@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { TileCache } from './tilecache';
-import { QUADTREE_SIZE, WORLD_SIZE } from './constants';
+import { QUADTREE_SIZE, WORLD_SIZE, INDIRECTION_TEXTURE_SIZE } from './constants';
 
 class VectorCache {
     private tmpVectors = Array.from({ length: 80000 }, () => new THREE.Vector3());
@@ -38,7 +38,7 @@ export class Quadtree {
     public texture: THREE.Texture;
     public offset = new THREE.Vector3();
     constructor(private renderer: THREE.WebGLRenderer, public tileCache: TileCache) {
-        const camera = new THREE.OrthographicCamera(0, QUADTREE_SIZE, QUADTREE_SIZE, 0);
+        const camera = new THREE.OrthographicCamera(0, INDIRECTION_TEXTURE_SIZE, INDIRECTION_TEXTURE_SIZE, 0);
         const bufferScene = new THREE.Scene();
         for (let i = 0; i < 300; i++) {
             const color = new THREE.Color();
@@ -46,7 +46,7 @@ export class Quadtree {
             this.meshes.push(mesh);
             bufferScene.add(mesh);
         }
-        const renderTarget = new THREE.WebGLRenderTarget(QUADTREE_SIZE, QUADTREE_SIZE, {
+        const renderTarget = new THREE.WebGLRenderTarget(INDIRECTION_TEXTURE_SIZE, INDIRECTION_TEXTURE_SIZE, {
             minFilter: THREE.NearestFilter,
             magFilter: THREE.NearestFilter,
         });
@@ -62,10 +62,9 @@ export class Quadtree {
     public update(visibleTiles: THREE.Vector3[], cameraPos: THREE.Vector3) {
         this.offset
             .copy(cameraPos)
-            .add(new THREE.Vector3(-QUADTREE_SIZE * 0.5, -QUADTREE_SIZE * 0.5))
+            .add(new THREE.Vector3(-INDIRECTION_TEXTURE_SIZE * 0.5, -INDIRECTION_TEXTURE_SIZE * 0.5))
             .floor();
         this.offset.z = 0;
-        //this.offset.set(0, 0, 0);
         this.tileCache.update(visibleTiles);
         let i = 0;
         for (const quadTile of visibleTiles) {
