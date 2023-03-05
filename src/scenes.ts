@@ -34,7 +34,7 @@ export class ThreeDScene {
     }
 
     private constructCamera(): THREE.PerspectiveCamera {
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 20000);
+        const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.01, 20000);
         camera.up.set(0, 0, 1);
         camera.position.set(0, 0, WORLD_SIZE * 0.5);
         return camera;
