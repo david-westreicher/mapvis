@@ -56,4 +56,3 @@ cd mapvis
 npm install
 npm run start
 ```
-```
