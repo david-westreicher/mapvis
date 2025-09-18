@@ -3,7 +3,11 @@ import * as Collections from 'typescript-collections';
 import { WORLD_SIZE } from './constants';
 
 class Point {
-    constructor(public x: number, public y: number, public cellWidth: number) {
+    constructor(
+        public x: number,
+        public y: number,
+        public cellWidth: number,
+    ) {
         this.x = Math.round(x);
         this.y = Math.round(y);
         this.cellWidth = cellWidth;
@@ -20,7 +24,7 @@ function buildGridHelper(
     level: number,
     width: number,
     verts: Collections.Dictionary<Point, number>,
-    triangles: number[][]
+    triangles: number[][],
 ) {
     /*        
                Level: 3
@@ -162,7 +166,7 @@ export function buildGeometry(level = 14, width = 200): THREE.BufferGeometry {
     const totalWidth = width * 2 ** level;
     const vertices = points.keys().map((point) => point.toArray((2 * WORLD_SIZE) / totalWidth));
     console.log(
-        `Created clipmap with ${vertices.length} vertices and ${triangles.length} triangles, width ${totalWidth}m`
+        `Created clipmap with ${vertices.length} vertices and ${triangles.length} triangles, width ${totalWidth}m`,
     );
 
     const geom = new THREE.BufferGeometry();

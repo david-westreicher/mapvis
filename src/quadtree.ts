@@ -36,7 +36,10 @@ export class Quadtree {
     private _render: () => void;
     private meshes: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>[] = [];
     public texture: THREE.Texture;
-    constructor(private renderer: THREE.WebGLRenderer, public tileCache: TileCache) {
+    constructor(
+        private renderer: THREE.WebGLRenderer,
+        public tileCache: TileCache,
+    ) {
         const camera = new THREE.OrthographicCamera(0, QUADTREE_SIZE, QUADTREE_SIZE, 0);
         const bufferScene = new THREE.Scene();
         for (let i = 0; i < 300; i++) {
@@ -96,7 +99,7 @@ export function getVisibleTiles(camPos: THREE.Vector3): THREE.Vector3[] {
     });
     res.sort(
         (a, b) =>
-            vectorCache.planeDistanceTo(camPos, a.x, a.y, a.z) - vectorCache.planeDistanceTo(camPos, b.x, b.y, b.z)
+            vectorCache.planeDistanceTo(camPos, a.x, a.y, a.z) - vectorCache.planeDistanceTo(camPos, b.x, b.y, b.z),
     );
     return res;
 }
