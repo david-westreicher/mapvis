@@ -60,6 +60,8 @@ export class Quadtree {
     }
 
     public update(visibleTiles: THREE.Vector3[], cameraPos: THREE.Vector3) {
+        // 10/9 * (x * 10**-i + 9*i - 1)) ~~ 10 * log(x + 1)
+        // 10 ** i <= x <= 10 ** (i+1)
         this.offset
             .copy(cameraPos)
             .add(new THREE.Vector3(-INDIRECTION_TEXTURE_SIZE * 0.5, -INDIRECTION_TEXTURE_SIZE * 0.5))
