@@ -7,7 +7,6 @@ It renders a global **heightmap** interactively, streaming and caching tiles dyn
   <img src="docs/mapvis.gif" alt="3D World Map Demo" width="700"/>
 </p>
 
----
 
 ## ✨ Features
 
@@ -21,7 +20,6 @@ It renders a global **heightmap** interactively, streaming and caching tiles dyn
   - LRU cache keeps visible tiles loaded and evicts unused tiles
 - Built with **Three.js** → runs directly in the browser
 
----
 
 ## 🛠️ How It Works
 
@@ -35,13 +33,11 @@ It renders a global **heightmap** interactively, streaming and caching tiles dyn
   - A **CPU tile manager** assigns priorities and writes downloaded tiles to the GPU texture.
   - An **LRU strategy** ensures visible tiles remain cached while unused tiles are dropped.
 
----
 
 ## 📷 Demo
 
 👉 [YouTube Demo](https://www.youtube.com/watch?v=dSGRqYxa79E)  
 
----
 
 ## 📚 Tech Stack
 
@@ -49,7 +45,6 @@ It renders a global **heightmap** interactively, streaming and caching tiles dyn
 - **Custom GLSL shaders** – GPU clipmap for vertices, Height Shader
 - **TypeScript** – CPU quadtree logic & tile streaming
 
----
 
 ## 🚀 Getting Started
 
