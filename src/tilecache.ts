@@ -42,7 +42,11 @@ class Tile {
     public onGPU = false;
     public texture: THREE.Texture = null;
 
-    constructor(public x: number, public y: number, private tileStyle: TileStyle) {}
+    constructor(
+        public x: number,
+        public y: number,
+        private tileStyle: TileStyle,
+    ) {}
 
     public async download(key: string, onFinishedLoading: () => void, onError: () => void) {
         this.key = key;
@@ -104,7 +108,7 @@ class TileCacheTexture {
     private scene = new THREE.Scene();
     private mesh = new THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>(
         new THREE.PlaneGeometry(TILE_WIDTH, TILE_WIDTH),
-        new THREE.MeshBasicMaterial({ map: null })
+        new THREE.MeshBasicMaterial({ map: null }),
     );
     constructor(private renderer: THREE.WebGLRenderer) {
         this.renderTarget.scissorTest = true;
@@ -166,7 +170,7 @@ export class TileCache {
     constructor(
         renderer: THREE.WebGLRenderer,
         private tileStyle: TileStyle,
-        private priorityDownloader = new TilePriorityDownloader()
+        private priorityDownloader = new TilePriorityDownloader(),
     ) {
         this.tileCache = new TileCacheTexture(renderer);
         if (tileStyle == TileStyle.AWS_HEIGHT) this.cpuCache = new CPUTileCacheTexture();
@@ -215,7 +219,7 @@ export class TileCache {
             return this.getEncodedTileColor(
                 Math.floor(x / nextSize) * nextSize,
                 Math.floor(y / nextSize) * nextSize,
-                nextSize
+                nextSize,
             );
         }
         let color = 0;
@@ -238,7 +242,7 @@ export class TileCache {
             () => {
                 console.log('error downloading', tile);
                 tile.clear();
-            }
+            },
         );
     }
 
