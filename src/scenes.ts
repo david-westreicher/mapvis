@@ -34,7 +34,7 @@ export class ThreeDScene {
     }
 
     private constructCamera(): THREE.PerspectiveCamera {
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 20000);
+        const camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.01, 20000);
         camera.up.set(0, 0, 1);
         camera.position.set(0, 0, WORLD_SIZE * 0.5);
         return camera;
@@ -50,9 +50,10 @@ export class ThreeDScene {
 }
 
 export class ClipMapScene extends ThreeDScene {
+    public shaderUniforms: { [uniform: string]: THREE.IUniform };
     constructor(protected renderer: THREE.WebGLRenderer, colorQuadtree: Quadtree, heightQuadtree: Quadtree) {
         super(renderer);
-        const shaderUniforms: { [uniform: string]: THREE.IUniform } = {
+        this.shaderUniforms = {
             camPos: {
                 value: this.camera.position, //TODO z-axis should use CPU height
             },
@@ -67,6 +68,9 @@ export class ClipMapScene extends ThreeDScene {
             },
             heightTextureCache: {
                 value: heightQuadtree.tileCache.texture,
+            },
+            indirectionMapOffset: {
+                value: new THREE.Vector3(),
             },
             HEIGHT_SCALE: {
                 value: HEIGHT_SCALE,
@@ -84,7 +88,7 @@ export class ClipMapScene extends ThreeDScene {
                 value: WORLD_SIZE,
             },
         };
-        const clipMapMesh = this.constructMesh(shaderUniforms);
+        const clipMapMesh = this.constructMesh(this.shaderUniforms);
         this.scene.add(clipMapMesh);
     }
 
@@ -153,7 +157,12 @@ export class GuiScene {
     private scene: THREE.Scene = new THREE.Scene();
     private static readonly PLANE_SIZE = 200;
 
-    constructor(private renderer: THREE.WebGLRenderer, colorQuadtree: Quadtree, heightQuadtree: Quadtree) {
+    constructor(
+        private renderer: THREE.WebGLRenderer,
+        colorQuadtree: Quadtree,
+        heightQuadtree: Quadtree,
+        private indirectionMapOffset: THREE.Vector3
+    ) {
         this.scene.add(this.constructFullScreenMesh(this.getDebugShader(colorQuadtree)));
         this.scene.add(
             this.constructFullScreenMesh(new THREE.MeshBasicMaterial({ map: colorQuadtree.tileCache.texture }))
@@ -173,6 +182,9 @@ export class GuiScene {
                 QUADTREE_WIDTH: {
                     value: QUADTREE_SIZE,
                 },
+                indirectionMapOffset: {
+                    value: this.indirectionMapOffset,
+                },
             },
             fragmentShader: QUADTREE_DEBUG_FRAGMENT_SHADER,
             vertexShader: QUADTREE_VERTEX_SHADER,
@@ -190,15 +202,16 @@ export class GuiScene {
     }
 
     public render() {
+        console.log(this.indirectionMapOffset);
         this.renderer.render(this.scene, this.camera);
+    }
+
+    public updateScene(cameraOffset: THREE.Vector3): void {
+        this.indirectionMapOffset.copy(cameraOffset);
     }
 }
 
 export class QuadTreeScene extends ThreeDScene {
-    private cameraMesh: THREE.Mesh = new THREE.Mesh(
-        new THREE.BoxGeometry(1, 1, 1),
-        new THREE.MeshBasicMaterial({ color: 0x000000 })
-    );
     constructor(
         protected renderer: THREE.WebGLRenderer,
         quadTreeTexture: THREE.Texture,
@@ -207,15 +220,6 @@ export class QuadTreeScene extends ThreeDScene {
     ) {
         super(renderer);
         this.scene.add(this.constructFullScreenMesh(quadTreeTexture, colorTexture, heightTexture));
-        this.scene.add(this.cameraMesh);
-    }
-
-    public update(): void {
-        super.update();
-        this.cameraMesh.position.copy(this.camera.position);
-        const scale = this.camera.position.z / 100;
-        this.cameraMesh.position.z = scale;
-        this.cameraMesh.scale.setScalar(scale);
     }
 
     public constructFullScreenMesh(

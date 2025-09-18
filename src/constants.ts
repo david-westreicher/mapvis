@@ -1,7 +1,9 @@
 export const QUADTREE_SIZE = 8192 * 2;
+export const INDIRECTION_TEXTURE_SIZE = QUADTREE_SIZE;
 export const TILE_WIDTH = 256;
-export const TILECACHE_WIDTH = 20;
+export const TILECACHE_WIDTH = 16;
 export const TILECACHE_PIXEL_WIDTH = TILE_WIDTH * TILECACHE_WIDTH;
 export const WORLD_SIZE = 8192;
-export const HEIGHT_SCALE = 1.0 / 45.0;
-export const CAMERA_HEIGHT_OFFSET = 2.0;
+export const GLOBAL_TO_METER_FACTOR = (2 * WORLD_SIZE) / 40000000.0;
+export const HEIGHT_SCALE = GLOBAL_TO_METER_FACTOR;
+export const CAMERA_HEIGHT_OFFSET = 0.1;

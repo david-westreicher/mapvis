@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { TileCache } from './tilecache';
-import { QUADTREE_SIZE, WORLD_SIZE } from './constants';
+import { QUADTREE_SIZE, WORLD_SIZE, INDIRECTION_TEXTURE_SIZE } from './constants';
 
 class VectorCache {
     private tmpVectors = Array.from({ length: 80000 }, () => new THREE.Vector3());
@@ -36,17 +36,17 @@ export class Quadtree {
     private _render: () => void;
     private meshes: THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>[] = [];
     public texture: THREE.Texture;
+    public offset = new THREE.Vector3();
     constructor(private renderer: THREE.WebGLRenderer, public tileCache: TileCache) {
-        const camera = new THREE.OrthographicCamera(0, QUADTREE_SIZE, QUADTREE_SIZE, 0);
+        const camera = new THREE.OrthographicCamera(0, INDIRECTION_TEXTURE_SIZE, INDIRECTION_TEXTURE_SIZE, 0);
         const bufferScene = new THREE.Scene();
         for (let i = 0; i < 300; i++) {
             const color = new THREE.Color();
             const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 1.0), new THREE.MeshBasicMaterial({ color }));
-            mesh.position.z = -1;
             this.meshes.push(mesh);
             bufferScene.add(mesh);
         }
-        const renderTarget = new THREE.WebGLRenderTarget(QUADTREE_SIZE, QUADTREE_SIZE, {
+        const renderTarget = new THREE.WebGLRenderTarget(INDIRECTION_TEXTURE_SIZE, INDIRECTION_TEXTURE_SIZE, {
             minFilter: THREE.NearestFilter,
             magFilter: THREE.NearestFilter,
         });
@@ -59,13 +59,20 @@ export class Quadtree {
         };
     }
 
-    public update(visibleTiles: THREE.Vector3[]) {
+    public update(visibleTiles: THREE.Vector3[], cameraPos: THREE.Vector3) {
+        // 10/9 * (x * 10**-i + 9*i - 1)) ~~ 10 * log(x + 1)
+        // 10 ** i <= x <= 10 ** (i+1)
+        this.offset
+            .copy(cameraPos)
+            .add(new THREE.Vector3(-INDIRECTION_TEXTURE_SIZE * 0.5, -INDIRECTION_TEXTURE_SIZE * 0.5))
+            .floor();
+        this.offset.z = 0;
         this.tileCache.update(visibleTiles);
         let i = 0;
         for (const quadTile of visibleTiles) {
             if (i >= this.meshes.length) break;
             const mesh = this.meshes[i++];
-            mesh.position.set(quadTile.x + quadTile.z / 2, quadTile.y + quadTile.z / 2, -1);
+            mesh.position.set(quadTile.x + quadTile.z / 2, quadTile.y + quadTile.z / 2, -1).sub(this.offset);
             mesh.scale.set(quadTile.z, quadTile.z, 1);
             const tileColor = this.tileCache.getEncodedTileColor(quadTile.x, quadTile.y, quadTile.z);
             mesh.material.color.setHex(tileColor);
